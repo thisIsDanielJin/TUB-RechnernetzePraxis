@@ -1,0 +1,5 @@
+/Users/danielwodke/Dropbox/Universität/Semester_9/Rechnernetze und Verteilte Systeme/Praxis/Praxis 0/praxis0/build/CMakeFiles/hello_world.dir
+/Users/danielwodke/Dropbox/Universität/Semester_9/Rechnernetze und Verteilte Systeme/Praxis/Praxis 0/praxis0/build/CMakeFiles/package.dir
+/Users/danielwodke/Dropbox/Universität/Semester_9/Rechnernetze und Verteilte Systeme/Praxis/Praxis 0/praxis0/build/CMakeFiles/package_source.dir
+/Users/danielwodke/Dropbox/Universität/Semester_9/Rechnernetze und Verteilte Systeme/Praxis/Praxis 0/praxis0/build/CMakeFiles/edit_cache.dir
+/Users/danielwodke/Dropbox/Universität/Semester_9/Rechnernetze und Verteilte Systeme/Praxis/Praxis 0/praxis0/build/CMakeFiles/rebuild_cache.dir

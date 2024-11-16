@@ -88,6 +88,7 @@ int main(int argc, char *argv[])
         if (line_end == NULL)
         {
             send_http_bad_request_response(client_fd);
+            close(client_fd);
             continue;
         }
 
@@ -96,8 +97,11 @@ int main(int argc, char *argv[])
         if (line_length >= sizeof(start_line))
         {
             send_http_bad_request_response(client_fd);
+            close(client_fd);
             continue;
         }
+        strncpy(start_line, buffer, line_length);
+        start_line[line_length] = '\0';
 
         char method[16];
         char uri[1024];
@@ -107,6 +111,7 @@ int main(int argc, char *argv[])
         if (num_matched != 3)
         {
             send_http_bad_request_response(client_fd);
+            close(client_fd);
             continue;
         }
 
@@ -157,19 +162,29 @@ int main(int argc, char *argv[])
 
         if (bad_request)
         {
+            send_http_bad_request_response(client_fd);
+            close(client_fd);
             continue;
         }
 
         if (strcmp(method, "GET") == 0)
         {
             // HTTP 404 Not found
-            const char *http_response = "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\n\r\n";
+            const char *http_response =
+                "HTTP/1.1 404 Not Found\r\n"
+                "Content-Length: 0\r\n"
+                "Connection: close\r\n"
+                "\r\n";
             send(client_fd, http_response, strlen(http_response), 0);
         }
         else
         {
             // HTTP 501 Not Implemented
-            const char *http_response = "HTTP/1.1 501 Not Implemented\r\nContent-Length: 0\r\n\r\n";
+            const char *http_response =
+                "HTTP/1.1 501 Not Implemented\r\n"
+                "Content-Length: 0\r\n"
+                "Connection: close\r\n"
+                "\r\n";
             send(client_fd, http_response, strlen(http_response), 0);
         }
 

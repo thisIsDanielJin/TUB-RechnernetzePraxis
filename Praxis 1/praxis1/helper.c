@@ -41,14 +41,16 @@ struct sockaddr_in derive_sockaddr(const char *host, const char *port)
 
 int send_http_bad_request_response(int client_fd)
 {
-    const char *http_response = "HTTP/1.1 400 Bad Request\r\nContent-Length: 0\r\n\r\n";
+    const char *http_response =
+        "HTTP/1.1 400 Bad Request\r\n"
+        "Content-Length: 0\r\n"
+        "Connection: close\r\n"
+        "\r\n";
 
     ssize_t bytes_sent = send(client_fd, http_response, strlen(http_response), 0);
     if (bytes_sent < 0)
     {
         perror("send");
-        close(client_fd);
-        return -1;
     }
 
     return 0;

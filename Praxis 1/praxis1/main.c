@@ -43,6 +43,17 @@ int setUpServer(char *ip, char *port)
     return sockfd;
 }
 
+int acceptClientConnection(int sockfd, struct sockaddr_in *client_addr)
+{
+    socklen_t client_addr_len = sizeof(*client_addr);
+    int client_fd = accept(sockfd, (struct sockaddr *)client_addr, &client_addr_len);
+    if (client_fd < 0)
+    {
+        perror("accept");
+    }
+    return client_fd;
+}
+
 int main(int argc, char *argv[])
 {
     if (argc != 3)
@@ -57,19 +68,9 @@ int main(int argc, char *argv[])
 
     while (1)
     {
-        int client_fd;
         struct sockaddr_in client_addr;
-        socklen_t client_addr_len = sizeof(client_addr);
+        int client_fd = acceptClientConnection(sockfd, &client_addr);
 
-        // accept connection
-        client_fd = accept(sockfd, (struct sockaddr *)&client_addr, &client_addr_len);
-        if (client_fd < 0)
-        {
-            perror("accept");
-            continue;
-        }
-
-        // print client address
         printf("Client verbunden von %s:%d\n", inet_ntoa(client_addr.sin_addr), ntohs(client_addr.sin_port));
 
         // receive data from client

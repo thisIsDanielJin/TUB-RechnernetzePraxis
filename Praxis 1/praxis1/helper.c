@@ -3,6 +3,8 @@
 #include <netdb.h>
 #include <arpa/inet.h>
 #include "helper.h"
+#include <unistd.h>
+#include <string.h>
 
 /**
  * Derives a sockaddr_in structure from the provided host and port information.
@@ -14,6 +16,7 @@ address.
  * @return A sockaddr_in structure representing the network address derived from
 the host and port.
  */
+
 struct sockaddr_in derive_sockaddr(const char *host, const char *port)
 {
     struct addrinfo hints = {
@@ -34,4 +37,21 @@ struct sockaddr_in derive_sockaddr(const char *host, const char *port)
     freeaddrinfo(result_info);
 
     return result;
+}
+
+int send_http_bad_request_response(int client_fd)
+{
+    const char *http_response =
+        "HTTP/1.1 400 Bad Request\r\n"
+        "Content-Length: 0\r\n"
+        "Connection: close\r\n"
+        "\r\n";
+
+    ssize_t bytes_sent = send(client_fd, http_response, strlen(http_response), 0);
+    if (bytes_sent < 0)
+    {
+        perror("send");
+    }
+
+    return 0;
 }

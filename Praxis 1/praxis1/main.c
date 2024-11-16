@@ -4,6 +4,7 @@
 #include "helper.h"
 #include <unistd.h>
 #include <arpa/inet.h>
+#include <string.h>
 
 int main(int argc, char *argv[])
 {
@@ -62,6 +63,29 @@ int main(int argc, char *argv[])
 
         // print client address
         printf("Client verbunden von %s:%d\n", inet_ntoa(client_addr.sin_addr), ntohs(client_addr.sin_port));
+
+        // receive data from client
+        char buffer[8192];
+        ssize_t bytes_received = recv(client_fd, buffer, sizeof(buffer) - 1, 0);
+        if (bytes_received < 0)
+        {
+            perror("recv");
+            close(client_fd);
+            continue;
+        }
+
+        buffer[bytes_received] = '\0'; // null-terminate string
+
+        // send HTTP 400 Bad Request
+        const char *http_response = "HTTP/1.1 400 Bad Request\r\nContent-Length: 0\r\n\r\n";
+
+        ssize_t bytes_sent = send(client_fd, http_response, strlen(http_response), 0);
+        if (bytes_sent < 0)
+        {
+            perror("send");
+            close(client_fd);
+            continue;
+        }
 
         // close connection to client
         close(client_fd);

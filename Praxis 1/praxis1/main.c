@@ -18,11 +18,9 @@ int recognize_packets(int* client, char* buffer){
             int bytes_send = send(*client,msg,len-1,0);
         }
     }
-    if(bytes_read > 2){
-        buffer[0] = buffer[bytes_read];
-        buffer[1] = buffer[bytes_read+1];
-        buffer[2] = buffer[bytes_read+2];
-    }
+    buffer[0] = buffer[bytes_read];
+    buffer[1] = buffer[bytes_read+1];
+    buffer[2] = buffer[bytes_read+2];
     return 1;
 }
 

@@ -6,22 +6,20 @@
 #include <arpa/inet.h>
 
 
-int recognize_packets(int* client, char* buffer){
-    int bytes_read = recv(*client,buffer+3,1024-3,0);
+int recognize_packets(int *client, char *buffer, int *start, int *end){
+    int bytes_read = recv(*client,buffer + *end,256,0);
     if(bytes_read == 0){
         return 0;
     }
-    for(int i = 0; i<bytes_read; i++){
-        if(buffer[i] == '\r' && buffer[i+1] == '\n' && buffer[i+2] == '\r' && buffer[i+3] == '\n'){
+    *end += bytes_read;
+    int diff = *end - *start;
+    for(int i = 3; i<diff; i++){
+        if(buffer[i-3 + *start] == '\r' && buffer[i-2+ *start] == '\n' && buffer[i-1 + *start] == '\r' && buffer[i + *start] == '\n'){
+            *start += i +1;
             char msg[] = "Reply\r\n\r\n";
             int len = sizeof(msg);
             int bytes_send = send(*client,msg,len-1,0);
         }
-    }
-    if(bytes_read > 2){
-        buffer[0] = buffer[bytes_read];
-        buffer[1] = buffer[bytes_read+1];
-        buffer[2] = buffer[bytes_read+2];
     }
     return 1;
 }
@@ -75,8 +73,10 @@ int main(int argc, char *argv[])
     }
 
     int N = 1;
-    while (N){
-        N = recognize_packets(&client_fd,buffer);
+    int start = 0;
+    int end = 0;
+    while(N){
+        N = recognize_packets(&client_fd,buffer, &start, &end);
     }
 
     // print client address

@@ -7,7 +7,7 @@
 
 
 int recognize_packets(int *client, char *buffer, int *start, int *end){
-    int bytes_read = recv(*client,buffer + *end,256,0);
+    ssize_t bytes_read = recv(*client,buffer + *end,256,0);
     if(bytes_read == 0){
         return 0;
     }
@@ -15,7 +15,7 @@ int recognize_packets(int *client, char *buffer, int *start, int *end){
     int diff = *end - *start;
     for(int i = 3; i<diff; i++){
         if(buffer[i-3 + *start] == '\r' && buffer[i-2+ *start] == '\n' && buffer[i-1 + *start] == '\r' && buffer[i + *start] == '\n'){
-            *start += i +1;
+            *end = *start;
             char msg[] = "Reply\r\n\r\n";
             int len = sizeof(msg);
             int bytes_send = send(*client,msg,len-1,0);

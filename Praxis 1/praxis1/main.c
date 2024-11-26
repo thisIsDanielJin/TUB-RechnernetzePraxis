@@ -67,7 +67,10 @@ int main(int argc, char *argv[])
     char *PORT = argv[2];
 
     int sockfd = setUpServer(IP, PORT); // 2.1
-
+    Resource storage[100];
+    for(int i = 0; i < 100; i++){
+        storage[i].address[0] = '\0';
+    }
     while (1)
     {
         struct sockaddr_in client_addr;
@@ -107,13 +110,14 @@ int main(int argc, char *argv[])
             while (1)
             {
                 size_t request_length = 0;
-                int complete = find_http_request(buffer + bytes_consumed, buffer_length - bytes_consumed, &request_length);
+                int content_length = 0;
+                int complete = find_http_request(buffer + bytes_consumed, buffer_length - bytes_consumed, &request_length, &content_length);
                 if (!complete)
                 {
                     break;
                 }
 
-                int res = process_http_request(buffer + bytes_consumed, request_length, client_fd);
+                int res = process_http_request(buffer + bytes_consumed, request_length, client_fd, storage, content_length);
                 if (res < 0)
                 {
                     break;

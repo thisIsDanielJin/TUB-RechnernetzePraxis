@@ -18,6 +18,17 @@
 
 #define MAX_RESOURCES 100
 
+static uint16_t self_id = 0;
+static uint16_t pred_id = 0;
+static char pred_ip[INET_ADDRSTRLEN] = {0};
+static uint16_t pred_port = 0;
+static uint16_t succ_id = 0;
+static char succ_ip[INET_ADDRSTRLEN] = {0};
+static uint16_t succ_port = 0;
+
+static int have_pred = 0;
+static int have_succ = 0;
+
 struct tuple resources[MAX_RESOURCES] = {
     {"/static/foo", "Foo", sizeof "Foo" - 1},
     {"/static/bar", "Bar", sizeof "Bar" - 1},
@@ -104,6 +115,26 @@ void send_reply(int conn, struct request *request)
     }
 }
 
+static int is_responsible(uint16_t key)
+{
+    if (!have_pred && !have_succ)
+    {
+        return 1;
+    }
+    if (pred_id < self_id)
+    {
+        return (pred_id < key && key <= self_id);
+    }
+    else if (pred_id > self_id)
+    {
+        return (key <= self_id || key > pred_id);
+    }
+    else
+    {
+        return 1;
+    }
+}
+
 /**
  * Processes an incoming packet from the client.
  *
@@ -125,6 +156,25 @@ size_t process_packet(int conn, char *buffer, size_t n)
 
     if (bytes_processed > 0)
     {
+        uint16_t uri_hash = pseudo_hash((unsigned char *)request.uri, strlen(request.uri));
+
+        if (strcmp(request.method, "GET") == 0)
+        {
+            // Check responsibility
+            if (!is_responsible(uri_hash) && have_succ)
+            {
+                // Not responsible -> redirect
+                char redirect[HTTP_MAX_SIZE];
+                int len = snprintf(redirect, sizeof(redirect),
+                                   "HTTP/1.1 303 See Other\r\n"
+                                   "Location: http://%s:%u%s\r\n"
+                                   "Content-Length: 0\r\n\r\n",
+                                   succ_ip, succ_port, request.uri);
+                send(conn, redirect, len, 0);
+                return -1;
+            }
+        }
+
         send_reply(conn, &request);
 
         // Check the "Connection" header in the request to determine if the
@@ -335,9 +385,47 @@ static int setup_server_socket(struct sockaddr_in addr)
  */
 int main(int argc, char **argv)
 {
-    if (argc != 3)
+    if (argc < 3 || argc > 4)
     {
         return EXIT_FAILURE;
+    }
+
+    if (argc == 4)
+    {
+        self_id = safe_strtoul(argv[3], NULL, 10, "Invalid self ID");
+    }
+    else
+    {
+        self_id = 0;
+    }
+
+    char *env;
+    if ((env = getenv("PRED_ID")) != NULL)
+    {
+        pred_id = safe_strtoul(env, NULL, 10, "Invalid PRED_ID");
+        have_pred = 1;
+    }
+    if ((env = getenv("PRED_IP")) != NULL)
+    {
+        strncpy(pred_ip, env, INET_ADDRSTRLEN - 1);
+    }
+    if ((env = getenv("PRED_PORT")) != NULL)
+    {
+        pred_port = safe_strtoul(env, NULL, 10, "Invalid PRED_PORT");
+    }
+
+    if ((env = getenv("SUCC_ID")) != NULL)
+    {
+        succ_id = safe_strtoul(env, NULL, 10, "Invalid SUCC_ID");
+        have_succ = 1;
+    }
+    if ((env = getenv("SUCC_IP")) != NULL)
+    {
+        strncpy(succ_ip, env, INET_ADDRSTRLEN - 1);
+    }
+    if ((env = getenv("SUCC_PORT")) != NULL)
+    {
+        succ_port = safe_strtoul(env, NULL, 10, "Invalid SUCC_PORT");
     }
 
     struct sockaddr_in addr = derive_sockaddr(argv[1], argv[2]);

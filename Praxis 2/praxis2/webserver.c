@@ -19,6 +19,8 @@
 #define MAX_RESOURCES 100
 
 static uint16_t self_id = 0;
+static char self_ip[INET_ADDRSTRLEN] = {0};
+static uint16_t self_port = 0;
 static uint16_t pred_id = 0;
 static char pred_ip[INET_ADDRSTRLEN] = {0};
 static uint16_t pred_port = 0;
@@ -136,6 +138,66 @@ static int is_responsible(uint16_t key)
 }
 
 /**
+ * Derives a sockaddr_in structure from the provided host and port information.
+ *
+ * @param host The host (IP address or hostname) to be resolved into a network
+ * address.
+ * @param port The port number to be converted into network byte order.
+ *
+ * @return A sockaddr_in structure representing the network address derived from
+ * the host and port.
+ */
+static struct sockaddr_in derive_sockaddr(const char *host, const char *port)
+{
+    struct addrinfo hints = {
+        .ai_family = AF_INET,
+    };
+    struct addrinfo *result_info;
+
+    // Resolve the host (IP address or hostname) into a list of possible
+    // addresses.
+    int returncode = getaddrinfo(host, port, &hints, &result_info);
+    if (returncode)
+    {
+        fprintf(stderr, "Error parsing host/port");
+        exit(EXIT_FAILURE);
+    }
+
+    // Copy the sockaddr_in structure from the first address in the list
+    struct sockaddr_in result = *((struct sockaddr_in *)result_info->ai_addr);
+
+    // Free the allocated memory for the result_info
+    freeaddrinfo(result_info);
+    return result;
+}
+/**
+ * Example IPv4 127.0.0.1 gets converted into [127][0][0][1]
+ *
+ * @param ipAddres IPv4 as an string
+ * @param ip_dec a buffer where the INT Values are safed
+ *
+ * @return
+ */
+void getDecValueOfIP4v(char* ipAddress,int *ip_dec)
+{
+    size_t j = 0;
+    size_t k = 0;
+    for(size_t i = 0; i < strlen(ipAddress);i++){
+        if(ipAddress[i] == '.'){
+            char temp[INET_ADDRSTRLEN-1];
+            strncpy(temp,ipAddress + k,i+1-k);
+            k = i+1;
+            ip_dec[j] = atoi(temp);
+            j++;
+        }
+    }
+    char temp[INET_ADDRSTRLEN-1];
+    strncpy(temp,ipAddress + k,4);
+    ip_dec[j] = atoi(temp);
+    return;
+}
+
+/**
  * Processes an incoming packet from the client.
  *
  * @param conn The socket descriptor representing the connection to the client.
@@ -148,7 +210,7 @@ static int is_responsible(uint16_t key)
  * malformed or an error occurs during processing, the return value is -1.
  *
  */
-size_t process_packet(int conn, char *buffer, size_t n)
+size_t process_packet(int udp_socket,int conn, char *buffer, size_t n)
 {
     struct request request = {
         .method = NULL, .uri = NULL, .payload = NULL, .payload_length = -1};
@@ -163,6 +225,32 @@ size_t process_packet(int conn, char *buffer, size_t n)
             // Check responsibility
             if (!is_responsible(uri_hash) && have_succ)
             {
+                //503: Service Unavailable-Antwort
+                char no_service[HTTP_MAX_SIZE];
+                int no_service_len = snprintf(no_service, sizeof(no_service),
+                                   "HTTP/1.1 503 Service Unavailable\r\n"
+                                   "Retry-After: 1\r\n"
+                                   "Content-Length: 0\r\n\r\n");
+                send(conn, no_service, no_service_len, 0);
+                // lookup Anfrage
+                char port [4];
+                sprintf(port,"%d",succ_port);
+                struct sockaddr_in succ_addr = derive_sockaddr(succ_ip,port);
+                char lookup[HTTP_MAX_SIZE];
+                int blocks_of_self_ip [4];
+                getDecValueOfIP4v(self_ip,blocks_of_self_ip);
+                    lookup[0] = htons(0)>> 8;
+                    lookup[1] = htons(uri_hash) & 0xFF;
+                    lookup[2] = htons(uri_hash) >> 8;
+                    lookup[3] = htons(self_id) & 0xFF;
+                    lookup[4] = htons(self_id) >> 8;
+                    lookup[5] = htons(blocks_of_self_ip[0]) >> 8;
+                    lookup[6] = htons(blocks_of_self_ip[1]) >> 8;
+                    lookup[7] = htons(blocks_of_self_ip[2]) >> 8;
+                    lookup[8] = htons(blocks_of_self_ip[3]) >> 8; 
+                    lookup[9] = htons(self_port) & 0xFF;
+                    lookup[10] = htons(self_port) >> 8;             
+                sendto(udp_socket, lookup, 11, 0, (struct sockaddr *)&succ_addr, sizeof(succ_addr));
                 // Not responsible -> redirect
                 char redirect[HTTP_MAX_SIZE];
                 int len = snprintf(redirect, sizeof(redirect),
@@ -248,7 +336,7 @@ char *buffer_discard(char *buffer, size_t discard, size_t keep)
  * false otherwise. If an error occurs while receiving data from the socket, the
  * function exits the program.
  */
-bool handle_connection(struct connection_state *state)
+bool handle_connection(struct connection_state *state, int udp_socket)
 {
     // Calculate the pointer to the end of the buffer to avoid buffer overflow
     const char *buffer_end = state->buffer + HTTP_MAX_SIZE;
@@ -271,7 +359,7 @@ bool handle_connection(struct connection_state *state)
     char *window_end = state->end + bytes_read;
 
     ssize_t bytes_processed = 0;
-    while ((bytes_processed = process_packet(state->sock, window_start,
+    while ((bytes_processed = process_packet(udp_socket,state->sock, window_start,
                                              window_end - window_start)) > 0)
     {
         window_start += bytes_processed;
@@ -286,39 +374,6 @@ bool handle_connection(struct connection_state *state)
     return true;
 }
 
-/**
- * Derives a sockaddr_in structure from the provided host and port information.
- *
- * @param host The host (IP address or hostname) to be resolved into a network
- * address.
- * @param port The port number to be converted into network byte order.
- *
- * @return A sockaddr_in structure representing the network address derived from
- * the host and port.
- */
-static struct sockaddr_in derive_sockaddr(const char *host, const char *port)
-{
-    struct addrinfo hints = {
-        .ai_family = AF_INET,
-    };
-    struct addrinfo *result_info;
-
-    // Resolve the host (IP address or hostname) into a list of possible
-    // addresses.
-    int returncode = getaddrinfo(host, port, &hints, &result_info);
-    if (returncode)
-    {
-        fprintf(stderr, "Error parsing host/port");
-        exit(EXIT_FAILURE);
-    }
-
-    // Copy the sockaddr_in structure from the first address in the list
-    struct sockaddr_in result = *((struct sockaddr_in *)result_info->ai_addr);
-
-    // Free the allocated memory for the result_info
-    freeaddrinfo(result_info);
-    return result;
-}
 
 /**
  * Sets up a TCP server socket and binds it to the provided sockaddr_in address.
@@ -392,7 +447,10 @@ int main(int argc, char **argv)
 
     if (argc == 4)
     {
-        self_id = safe_strtoul(argv[3], NULL, 10, "Invalid self ID");
+        char *endptr;
+        strncpy(self_ip,argv[1],INET_ADDRSTRLEN - 1);
+        self_port = safe_strtoul(argv[2], NULL, 10, "Invalid self Port");
+        self_id = safe_strtoul(argv[3], &endptr, 10, "Invalid self ID");
     }
     else
     {
@@ -512,7 +570,7 @@ int main(int argc, char **argv)
 
                 // Call the 'handle_connection' function to process the incoming
                 // data on the socket.
-                bool cont = handle_connection(&state);
+                bool cont = handle_connection(&state,udp_socket);
                 if (!cont)
                 { // get ready for a new connection
                     sockets[0].events = POLLIN;

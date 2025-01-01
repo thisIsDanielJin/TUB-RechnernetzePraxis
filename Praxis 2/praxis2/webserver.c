@@ -197,6 +197,60 @@ void getDecValueOfIP4v(char* ipAddress,int *ip_dec)
     return;
 }
 
+size_t reply_lookup(int udp_socket){
+    uint8_t buffer[BUFSIZ];
+    char lookup[BUFSIZ];
+    
+    // clear the Buffers
+    memset(buffer, 0, BUFSIZ);
+    memset(lookup, 0, BUFSIZ);
+
+    char p_port [4];
+    sprintf(p_port,"%d",pred_port);
+    struct sockaddr_in pred_addr = derive_sockaddr(pred_ip,p_port);
+
+    //lookup reply
+    uint8_t hash1 = buffer [1];
+    uint8_t hash2 = buffer [2];
+    uint16_t hash_id = ((uint16_t)hash1 << 8) | hash2; 
+    if(is_responsible(hash_id))
+    {
+        int blocks_of_pred_ip [4];
+        getDecValueOfIP4v(self_ip,blocks_of_pred_ip);
+            lookup[0] = htons(1)>> 8;
+            lookup[1] = htons(pred_id) & 0xFF;
+            lookup[2] = htons(pred_id) >> 8;
+            lookup[3] = htons(self_id) & 0xFF;
+            lookup[4] = htons(self_id) >> 8;
+            lookup[5] = htons(blocks_of_pred_ip[0]) >> 8;
+            lookup[6] = htons(blocks_of_pred_ip[1]) >> 8;
+            lookup[7] = htons(blocks_of_pred_ip[2]) >> 8;
+            lookup[8] = htons(blocks_of_pred_ip[3]) >> 8; 
+            lookup[9] = htons(self_port) & 0xFF;
+            lookup[10] = htons(self_port) >> 8;
+        //UDP: send msg to pred addr           
+        sendto(udp_socket, lookup, 11, 0, (struct sockaddr *)&pred_addr, sizeof(pred_addr));
+    }
+    else{
+        int blocks_of_pred_ip [4];
+        getDecValueOfIP4v(succ_ip,blocks_of_pred_ip);
+            lookup[0] = htons(1)>> 8;
+            lookup[1] = htons(self_id) & 0xFF;
+            lookup[2] = htons(self_id) >> 8;
+            lookup[3] = htons(succ_id) & 0xFF;
+            lookup[4] = htons(succ_id) >> 8;
+            lookup[5] = htons(blocks_of_pred_ip[0]) >> 8;
+            lookup[6] = htons(blocks_of_pred_ip[1]) >> 8;
+            lookup[7] = htons(blocks_of_pred_ip[2]) >> 8;
+            lookup[8] = htons(blocks_of_pred_ip[3]) >> 8; 
+            lookup[9] = htons(succ_port) & 0xFF;
+            lookup[10] = htons(succ_port) >> 8;
+        //UDP: send msg to pred addr           
+        sendto(udp_socket, lookup, 11, 0, (struct sockaddr *)&pred_addr, sizeof(pred_addr));
+    }
+    return 1;
+}
+
 /**
  * Processes an incoming packet from the client.
  *
@@ -235,7 +289,8 @@ size_t process_packet(int udp_socket,int conn, char *buffer, size_t n)
                 // lookup Anfrage
                 char port [4];
                 sprintf(port,"%d",succ_port);
-                struct sockaddr_in succ_addr = derive_sockaddr(succ_ip,port);
+                struct sockaddr_in succ_addr = derive_sockaddr(succ_ip,port); //addr of succ
+
                 char lookup[HTTP_MAX_SIZE];
                 int blocks_of_self_ip [4];
                 getDecValueOfIP4v(self_ip,blocks_of_self_ip);
@@ -249,8 +304,10 @@ size_t process_packet(int udp_socket,int conn, char *buffer, size_t n)
                     lookup[7] = htons(blocks_of_self_ip[2]) >> 8;
                     lookup[8] = htons(blocks_of_self_ip[3]) >> 8; 
                     lookup[9] = htons(self_port) & 0xFF;
-                    lookup[10] = htons(self_port) >> 8;             
+                    lookup[10] = htons(self_port) >> 8;
+                //UDP: send msg to succ addr             
                 sendto(udp_socket, lookup, 11, 0, (struct sockaddr *)&succ_addr, sizeof(succ_addr));
+
                 // Not responsible -> redirect
                 char redirect[HTTP_MAX_SIZE];
                 int len = snprintf(redirect, sizeof(redirect),
@@ -262,7 +319,6 @@ size_t process_packet(int udp_socket,int conn, char *buffer, size_t n)
                 return -1;
             }
         }
-
         send_reply(conn, &request);
 
         // Check the "Connection" header in the request to determine if the
@@ -514,9 +570,12 @@ int main(int argc, char **argv)
     }
 
     // Create an array of pollfd structures to monitor sockets.
-    struct pollfd sockets[2] = {
-        {.fd = server_socket, .events = POLLIN},
+    struct pollfd sockets[4] = {
+        {.fd = server_socket, .events = POLLIN},{.fd = -1, .events = 0},
+        {.fd = udp_socket, .events = POLLIN},{.fd = -1, .events = 0}
     };
+
+    int fd_server;
 
     struct connection_state state = {0};
     while (true)
@@ -557,6 +616,7 @@ int main(int argc, char **argv)
                 else
                 {
                     connection_setup(&state, connection);
+                    fd_server = connection;
 
                     // limit to one connection at a time
                     sockets[0].events = 0;
@@ -564,7 +624,23 @@ int main(int argc, char **argv)
                     sockets[1].events = POLLIN;
                 }
             }
-            else
+            else if(s == udp_socket){
+
+                uint8_t buffer[BUFSIZ];
+                // clear the Buffers
+                memset(buffer, 0, BUFSIZ);
+
+                char p_port [4];
+                sprintf(p_port,"%d",pred_port);
+                struct sockaddr_in pred_addr = derive_sockaddr(pred_ip,p_port);
+
+                ssize_t check = recvfrom(udp_socket, buffer, 11, 0, (struct sockaddr *)&pred_addr, (socklen_t*)sizeof(pred_addr));
+                if(check <= 0)
+                {
+                    reply_lookup(udp_socket);  
+                }
+            }
+            else if(fd_server == sockets[1].fd)
             {
                 assert(s == state.sock);
 
@@ -578,6 +654,26 @@ int main(int argc, char **argv)
                     sockets[1].events = 0;
                 }
             }
+            /* else if(fd_upd == sockets[3].fd)
+            {
+                uint8_t buffer[BUFSIZ];
+                char lookup[BUFSIZ];
+                
+                // clear the Buffers
+                memset(buffer, 0, BUFSIZ);
+                memset(lookup, 0, BUFSIZ);
+
+                char p_port [4];
+                sprintf(p_port,"%d",pred_port);
+                struct sockaddr_in pred_addr = derive_sockaddr(pred_ip,p_port);
+                sendto(udp_socket, lookup, 11, 0, (struct sockaddr *)&pred_addr, sizeof(pred_addr));
+                //if(reply_lookup(udp_socket))
+                ///{
+                    sockets[2].events = POLLIN;
+                    sockets[3].fd = -1;
+                    sockets[3].events = 0;
+                //}
+            } */
         }
     }
 

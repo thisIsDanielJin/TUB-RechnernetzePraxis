@@ -196,8 +196,15 @@ void getDecValueOfIP4v(char* ipAddress,int *ip_dec)
     ip_dec[j] = atoi(temp);
     return;
 }
-
-size_t reply_lookup(int udp_socket){
+/**
+ * Send lookup reply or forward lookup 
+ *
+ * @param udp_socket fd of udp_socket
+ * @param hash_id hash_id from the lookup
+ *
+ * @return
+ */
+void reply_lookup(int udp_socket,uint16_t hash_id){
     uint8_t buffer[BUFSIZ];
     char lookup[BUFSIZ];
     
@@ -209,11 +216,8 @@ size_t reply_lookup(int udp_socket){
     sprintf(p_port,"%d",pred_port);
     struct sockaddr_in pred_addr = derive_sockaddr(pred_ip,p_port);
 
-    //lookup reply
-    uint8_t hash1 = buffer [1];
-    uint8_t hash2 = buffer [2];
-    uint16_t hash_id = ((uint16_t)hash1 << 8) | hash2; 
-    if(is_responsible(hash_id))
+    //lookup reply 
+    if(hash_id <= self_id)
     {
         int blocks_of_pred_ip [4];
         getDecValueOfIP4v(self_ip,blocks_of_pred_ip);
@@ -231,7 +235,8 @@ size_t reply_lookup(int udp_socket){
         //UDP: send msg to pred addr           
         sendto(udp_socket, lookup, 11, 0, (struct sockaddr *)&pred_addr, sizeof(pred_addr));
     }
-    else{
+    else if(hash_id <= succ_id)
+    {
         int blocks_of_pred_ip [4];
         getDecValueOfIP4v(succ_ip,blocks_of_pred_ip);
             lookup[0] = htons(1)>> 8;
@@ -247,8 +252,32 @@ size_t reply_lookup(int udp_socket){
             lookup[10] = htons(succ_port) >> 8;
         //UDP: send msg to pred addr           
         sendto(udp_socket, lookup, 11, 0, (struct sockaddr *)&pred_addr, sizeof(pred_addr));
+
     }
-    return 1;
+    else // lookup forward
+    {    
+        char s_port [4];
+        sprintf(s_port,"%d",succ_port);
+        struct sockaddr_in succ_addr = derive_sockaddr(succ_ip,s_port); //addr of succ
+
+        char lookup[HTTP_MAX_SIZE];
+        int blocks_of_self_ip [4];
+        getDecValueOfIP4v(pred_ip,blocks_of_self_ip);
+            lookup[0] = htons(0)>> 8;
+            lookup[1] = hash_id >> 8;
+            lookup[2] = hash_id & 0xFF;
+            lookup[3] = htons(pred_id) & 0xFF;
+            lookup[4] = htons(pred_id) >> 8;
+            lookup[5] = htons(blocks_of_self_ip[0]) >> 8;
+            lookup[6] = htons(blocks_of_self_ip[1]) >> 8;
+            lookup[7] = htons(blocks_of_self_ip[2]) >> 8;
+            lookup[8] = htons(blocks_of_self_ip[3]) >> 8; 
+            lookup[9] = htons(pred_port) & 0xFF;
+            lookup[10] = htons(pred_port) >> 8;
+        //UDP: send msg to succ addr             
+        sendto(udp_socket, lookup, 11, 0, (struct sockaddr *)&succ_addr, sizeof(succ_addr));
+    }
+    return;
 }
 
 /**
@@ -625,19 +654,22 @@ int main(int argc, char **argv)
                 }
             }
             else if(s == udp_socket){
+                //handle incomming msg onto the UDP Socket
 
                 uint8_t buffer[BUFSIZ];
-                // clear the Buffers
+                // clear the buffer
                 memset(buffer, 0, BUFSIZ);
 
-                char p_port [4];
-                sprintf(p_port,"%d",pred_port);
-                struct sockaddr_in pred_addr = derive_sockaddr(pred_ip,p_port);
+                //bytesread from recvfrom() of udpsocket 
+                ssize_t check = recvfrom(udp_socket, buffer, 11, 0, (struct sockaddr *)&addr, (socklen_t*)sizeof(addr));
 
-                ssize_t check = recvfrom(udp_socket, buffer, 11, 0, (struct sockaddr *)&pred_addr, (socklen_t*)sizeof(pred_addr));
-                if(check <= 0)
+                uint8_t hash1 = buffer [1];
+                uint8_t hash2 = buffer [2];
+                uint16_t hash_id = ((uint16_t)hash1 << 8) | hash2;
+
+                if(check <= 0 && buffer[0] == 0)
                 {
-                    reply_lookup(udp_socket);  
+                    reply_lookup(udp_socket,hash_id);
                 }
             }
             else if(fd_server == sockets[1].fd)
@@ -654,26 +686,6 @@ int main(int argc, char **argv)
                     sockets[1].events = 0;
                 }
             }
-            /* else if(fd_upd == sockets[3].fd)
-            {
-                uint8_t buffer[BUFSIZ];
-                char lookup[BUFSIZ];
-                
-                // clear the Buffers
-                memset(buffer, 0, BUFSIZ);
-                memset(lookup, 0, BUFSIZ);
-
-                char p_port [4];
-                sprintf(p_port,"%d",pred_port);
-                struct sockaddr_in pred_addr = derive_sockaddr(pred_ip,p_port);
-                sendto(udp_socket, lookup, 11, 0, (struct sockaddr *)&pred_addr, sizeof(pred_addr));
-                //if(reply_lookup(udp_socket))
-                ///{
-                    sockets[2].events = POLLIN;
-                    sockets[3].fd = -1;
-                    sockets[3].events = 0;
-                //}
-            } */
         }
     }
 

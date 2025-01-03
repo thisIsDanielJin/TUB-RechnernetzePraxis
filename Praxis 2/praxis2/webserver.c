@@ -11,6 +11,7 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <stdbool.h> //added
 
 #include "data.h"
 #include "http.h"
@@ -290,7 +291,7 @@ struct redirect_addr reply_lookup(int udp_socket,uint16_t hash_id){
         sendto(udp_socket, lookup, 11, 0, (struct sockaddr *)&succ_addr, sizeof(succ_addr));
 
     }
-    //strcpy(r.ip,succ_ip); r.redirect_bool = 1; r.port = succ_port;
+    strcpy(r.ip,succ_ip); r.redirect_bool = 1; r.port = succ_port;
     return r;
 }
 
@@ -341,12 +342,9 @@ size_t process_packet(int udp_socket,int conn, char *buffer, size_t n)
                                    "Retry-After: 1\r\n"
                                    "Content-Length: 0\r\n\r\n");
                 send(conn, no_service, no_service_len, 0);
-                // lookup Anfrage
-                char port [4];
-                sprintf(port,"%d",succ_port);
-                struct sockaddr_in succ_addr = derive_sockaddr(succ_ip,port); //addr of succ
 
-                char lookup[HTTP_MAX_SIZE];
+                char lookup[BUFSIZ];
+                memset(lookup, 0, BUFSIZ);
                 int blocks_of_self_ip [4];
                 getDecValueOfIP4v(self_ip,blocks_of_self_ip);
                     lookup[0] = htons(0)>> 8;
@@ -360,25 +358,18 @@ size_t process_packet(int udp_socket,int conn, char *buffer, size_t n)
                     lookup[8] = htons(blocks_of_self_ip[3]) >> 8; 
                     lookup[9] = htons(self_port) & 0xFF;
                     lookup[10] = htons(self_port) >> 8;
-                //UDP: send msg to succ addr             
-                sendto(udp_socket, lookup, 11, 0, (struct sockaddr *)&succ_addr, sizeof(succ_addr));
-                //redirect.redirect_bool = 1;
 
-                /* uint8_t buffer[BUFSIZ];
-                // clear the buffer
-                memset(buffer, 0, BUFSIZ);
-                char sport [4];
-                sprintf(sport,"%d",self_port);
-                struct sockaddr_in addr = derive_sockaddr(self_ip,sport);
+                char port [4];
+                sprintf(port,"%d",succ_port);
+                struct sockaddr_in succ_addr = derive_sockaddr(succ_ip,port);
 
-                //bytesread from recvfrom() of udpsocket 
-                ssize_t check = recv(udp_socket, buffer, 11, 0);
-
-                uint8_t hash1 = buffer [1];
-                uint8_t hash2 = buffer [2];
-                uint16_t hash_id = ((uint16_t)hash1 << 8) | hash2;
-
-                redirect = reply_lookup(udp_socket, hash_id); */
+                //UDP: send msg to succ addr      
+                int bytessend_udp;
+                bytessend_udp = sendto(udp_socket, lookup, 11, 0,(struct sockaddr*)&succ_addr,sizeof(succ_addr));    
+                if(bytessend_udp < 1){
+                    perror("sendto succ");
+                    exit(EXIT_FAILURE);
+                }
 
                 return -1;
             }
@@ -552,6 +543,43 @@ static int setup_server_socket(struct sockaddr_in addr)
 }
 
 /**
+ * Sets up a UDP server socket and binds it to the provided sockaddr_in address.
+ *
+ * @param addr The sockaddr_in structure representing the IP address and port of
+ * the server.
+ *
+ * @return The file descriptor of the created UDP server socket.
+ */
+static int setup_udp_socket(struct sockaddr_in addr)
+{
+    const int enable_udp = 1;
+
+    int udp_socket = socket(AF_INET, SOCK_DGRAM, 0);
+    if (udp_socket == -1)
+    {
+        perror("socket(UDP)");
+        exit(EXIT_FAILURE);
+    }
+
+    int enable = 1;
+    if (setsockopt(udp_socket, SOL_SOCKET, SO_REUSEADDR, &enable_udp, sizeof(enable_udp)) == -1)
+    {
+        perror("setsockopt(UDP)");
+        close(udp_socket);
+        exit(EXIT_FAILURE);
+    }
+
+    if (bind(udp_socket, (struct sockaddr *)&addr, sizeof(addr)) == -1)
+    {
+        perror("bind(UDP)");
+        close(udp_socket);
+        exit(EXIT_FAILURE);
+    }
+
+    return udp_socket;
+}
+
+/**
  *  The program expects 3; otherwise, it returns EXIT_FAILURE.
  *
  *  Call as:
@@ -610,37 +638,14 @@ int main(int argc, char **argv)
 
     // Set up a server socket.
     int server_socket = setup_server_socket(addr);
-
-    int udp_socket = socket(AF_INET, SOCK_DGRAM, 0);
-    if (udp_socket == -1)
-    {
-        perror("socket(UDP)");
-        exit(EXIT_FAILURE);
-    }
-
-    int enable = 1;
-    if (setsockopt(udp_socket, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(enable)) == -1)
-    {
-        perror("setsockopt(UDP)");
-        close(udp_socket);
-        exit(EXIT_FAILURE);
-    }
-
-    if (bind(udp_socket, (struct sockaddr *)&addr, sizeof(addr)) == -1)
-    {
-        perror("bind(UDP)");
-        close(udp_socket);
-        exit(EXIT_FAILURE);
-    }
+    //Set up a udp_socket.
+    int udp_socket = setup_udp_socket(addr);
 
     // Create an array of pollfd structures to monitor sockets.
     struct pollfd sockets[3] = {
         {.fd = server_socket, .events = POLLIN},{.fd = -1, .events = 0},
         {.fd = udp_socket, .events = POLLIN}
     };
-
-    int fd_server;
-    int p;
 
     struct connection_state state = {0};
     while (true)
@@ -681,7 +686,6 @@ int main(int argc, char **argv)
                 else
                 {
                     connection_setup(&state, connection);
-                    fd_server = connection;
 
                     // limit to one connection at a time
                     sockets[0].events = 0;
@@ -691,20 +695,17 @@ int main(int argc, char **argv)
             }
             else if(s == udp_socket)
             {   //handle incomming msg onto the UDP Socket
-                
                 uint8_t buffer[BUFSIZ];
                 // clear the buffer
                 memset(buffer, 0, BUFSIZ);
                 
-                //bytesread from recvfrom() of udpsocket 
-                ssize_t check = recv(udp_socket, buffer, 11, 0); //, (struct sockaddr *)&addr, (socklen_t*)sizeof(addr));
-
-                uint8_t hash1 = buffer [1];
-                uint8_t hash2 = buffer [2];
-                uint16_t hash_id = ((uint16_t)hash1 << 8) | hash2;
-
+                //bytesread from recv() of udpsocket 
+                ssize_t check = recv(udp_socket, buffer, 11, 0);
                 if(check > 0 && buffer[0] == 0)
                 {
+                    uint8_t hash1 = buffer [1];
+                    uint8_t hash2 = buffer [2];
+                    uint16_t hash_id = ((uint16_t)hash1 << 8) | hash2;
                     reply_lookup(udp_socket,hash_id);
                 } 
             }

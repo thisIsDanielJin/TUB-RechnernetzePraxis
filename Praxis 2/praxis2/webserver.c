@@ -368,7 +368,6 @@ size_t process_packet(int udp_socket,int conn, char *buffer, size_t n)
                     perror("sendto succ");
                     exit(EXIT_FAILURE);
                 }
-
                 return -1;
             }
         }
@@ -697,6 +696,9 @@ int main(int argc, char **argv)
                 {
                     connection_setup(&state, connection);
 
+                    //char * test = "Connect\0";
+                    //sendto(udp_socket,test,9,0,(struct sockaddr*)&pred_addr,sizeof(pred_addr));
+
                     // limit to one connection at a time
                     sockets[1].events = 0;
                     sockets[2].fd = connection;
@@ -710,7 +712,7 @@ int main(int argc, char **argv)
                 memset(buffer, 0, BUFSIZ);
                 
                 //bytesread from recv() of udpsocket 
-                ssize_t check = recv(s, buffer, 11, 0);
+                ssize_t check = recv(s, buffer, 11, MSG_DONTWAIT);
                 
                 if(check > 0 && buffer[0] == 0)
                 {
@@ -721,11 +723,15 @@ int main(int argc, char **argv)
                 }
                 else if(check > 0 && buffer[0] == 1)
                 {
-                    char * test = "Hallo\0";
-                    sendto(udp_socket,buffer,11,0,(struct sockaddr*)&pred_addr,sizeof(pred_addr));
+                    //sendto(udp_socket,buffer,11,0,(struct sockaddr*)&pred_addr,sizeof(pred_addr));
                     redirect.redirect_bool = 1;
-                    
+                    uint8_t port1 = buffer [9];
+                    uint8_t port2 = buffer [10];
+                    uint16_t port_reply = ((uint16_t)port1 << 8) | port2;
+                    redirect.port = port_reply;
+                    strcpy(redirect.ip,"127.0.0.1");
                 }
+                
             }
             else
             {
@@ -736,10 +742,13 @@ int main(int argc, char **argv)
                 bool cont = handle_connection(&state,udp_socket);
                 if (!cont)
                 { // get ready for a new connection
-                    close(sockets[2].fd);
-                    sockets[1].events = POLLIN;
-                    sockets[2].fd = -1;
-                    sockets[2].events = 0;
+                    //char * test = "CLOSE\0";
+                    //sendto(udp_socket,test,7,0,(struct sockaddr*)&pred_addr,sizeof(pred_addr));
+                    //close(sockets[2].fd);
+                    
+                    //sockets[1].events = POLLIN;
+                    //sockets[2].fd = -1;
+                    //sockets[2].events = 0;
                 }
             }
         }

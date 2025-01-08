@@ -11,7 +11,6 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include <stdbool.h> //added
 
 #include "data.h"
 #include "http.h"
@@ -38,6 +37,9 @@ static uint16_t pred_port = 0;
 static uint16_t succ_id = 0;
 static char succ_ip[INET_ADDRSTRLEN] = {0};
 static uint16_t succ_port = 0;
+
+static struct sockaddr_in succ_addr;
+static struct sockaddr_in pred_addr;
 
 static int have_pred = 0;
 static int have_succ = 0;
@@ -221,9 +223,9 @@ struct redirect_addr reply_lookup(int udp_socket,uint16_t hash_id){
     // clear the Buffers
     memset(lookup, 0, BUFSIZ);
 
-    char p_port [4];
-    sprintf(p_port,"%d",pred_port);
-    struct sockaddr_in pred_addr = derive_sockaddr(pred_ip,p_port);
+    //char p_port [4];
+    //sprintf(p_port,"%d",pred_port);
+    //struct sockaddr_in pred_addr = derive_sockaddr(pred_ip,p_port);
 
     //lookup reply 
     if(hash_id <= self_id)
@@ -269,9 +271,9 @@ struct redirect_addr reply_lookup(int udp_socket,uint16_t hash_id){
     }
     else // lookup forward
     {    
-        char s_port [4];
-        sprintf(s_port,"%d",succ_port);
-        struct sockaddr_in succ_addr = derive_sockaddr(succ_ip,s_port); //addr of succ
+        //char s_port [4];
+        //sprintf(s_port,"%d",succ_port);
+        //struct sockaddr_in succ_addr = derive_sockaddr(succ_ip,s_port); //addr of succ
 
         char lookup[HTTP_MAX_SIZE];
         int blocks_of_self_ip [4];
@@ -291,7 +293,7 @@ struct redirect_addr reply_lookup(int udp_socket,uint16_t hash_id){
         sendto(udp_socket, lookup, 11, 0, (struct sockaddr *)&succ_addr, sizeof(succ_addr));
 
     }
-    strcpy(r.ip,succ_ip); r.redirect_bool = 1; r.port = succ_port;
+    //strcpy(r.ip,succ_ip); r.redirect_bool = 1; r.port = succ_port;
     return r;
 }
 
@@ -358,10 +360,6 @@ size_t process_packet(int udp_socket,int conn, char *buffer, size_t n)
                     lookup[8] = htons(blocks_of_self_ip[3]) >> 8; 
                     lookup[9] = htons(self_port) & 0xFF;
                     lookup[10] = htons(self_port) >> 8;
-
-                char port [4];
-                sprintf(port,"%d",succ_port);
-                struct sockaddr_in succ_addr = derive_sockaddr(succ_ip,port);
 
                 //UDP: send msg to succ addr      
                 int bytessend_udp;
@@ -561,7 +559,6 @@ static int setup_udp_socket(struct sockaddr_in addr)
         exit(EXIT_FAILURE);
     }
 
-    int enable = 1;
     if (setsockopt(udp_socket, SOL_SOCKET, SO_REUSEADDR, &enable_udp, sizeof(enable_udp)) == -1)
     {
         perror("setsockopt(UDP)");
@@ -641,10 +638,23 @@ int main(int argc, char **argv)
     //Set up a udp_socket.
     int udp_socket = setup_udp_socket(addr);
 
+    if(have_succ)
+    {
+        char s_port [4];
+        sprintf(s_port,"%d",succ_port);
+        succ_addr = derive_sockaddr(succ_ip,s_port);
+    }
+    if(have_pred)
+    {
+        char p_port [4];
+        sprintf(p_port,"%d",pred_port);
+        pred_addr = derive_sockaddr(pred_ip,p_port);
+    }
+
     // Create an array of pollfd structures to monitor sockets.
     struct pollfd sockets[3] = {
-        {.fd = server_socket, .events = POLLIN},{.fd = -1, .events = 0},
-        {.fd = udp_socket, .events = POLLIN}
+        {.fd = udp_socket, .events = POLLIN},
+        {.fd = server_socket, .events = POLLIN},{.fd = -1, .events = 0}
     };
 
     struct connection_state state = {0};
@@ -688,9 +698,9 @@ int main(int argc, char **argv)
                     connection_setup(&state, connection);
 
                     // limit to one connection at a time
-                    sockets[0].events = 0;
-                    sockets[1].fd = connection;
-                    sockets[1].events = POLLIN;
+                    sockets[1].events = 0;
+                    sockets[2].fd = connection;
+                    sockets[2].events = POLLIN;
                 }
             }
             else if(s == udp_socket)
@@ -700,14 +710,22 @@ int main(int argc, char **argv)
                 memset(buffer, 0, BUFSIZ);
                 
                 //bytesread from recv() of udpsocket 
-                ssize_t check = recv(udp_socket, buffer, 11, 0);
+                ssize_t check = recv(s, buffer, 11, 0);
+                
                 if(check > 0 && buffer[0] == 0)
                 {
                     uint8_t hash1 = buffer [1];
                     uint8_t hash2 = buffer [2];
                     uint16_t hash_id = ((uint16_t)hash1 << 8) | hash2;
                     reply_lookup(udp_socket,hash_id);
-                } 
+                }
+                else if(check > 0 && buffer[0] == 1)
+                {
+                    char * test = "Hallo\0";
+                    sendto(udp_socket,buffer,11,0,(struct sockaddr*)&pred_addr,sizeof(pred_addr));
+                    redirect.redirect_bool = 1;
+                    
+                }
             }
             else
             {
@@ -718,9 +736,10 @@ int main(int argc, char **argv)
                 bool cont = handle_connection(&state,udp_socket);
                 if (!cont)
                 { // get ready for a new connection
-                    sockets[0].events = POLLIN;
-                    sockets[1].fd = -1;
-                    sockets[1].events = 0;
+                    close(sockets[2].fd);
+                    sockets[1].events = POLLIN;
+                    sockets[2].fd = -1;
+                    sockets[2].events = 0;
                 }
             }
         }

@@ -279,6 +279,29 @@ void reply_lookup(int udp_socket,uint16_t hash_id, uint16_t request_id, uint16_t
         sendto(udp_socket, lookup, 11, 0, (struct sockaddr *)&request_addr, sizeof(request_addr));
 
     }
+    else if(hash_id > self_id && hash_id <= succ_id)
+    {
+        int blocks_of_pred_ip [4];
+        getDecValueOfIP4v(self_ip,blocks_of_pred_ip);
+            lookup[0] = htons(1)>> 8;
+            lookup[1] = htons(self_id) & 0xFF;
+            lookup[2] = htons(self_id) >> 8;
+            lookup[3] = htons(succ_id) & 0xFF;
+            lookup[4] = htons(succ_id) >> 8;
+            lookup[5] = htons(blocks_of_pred_ip[0]) >> 8;
+            lookup[6] = htons(blocks_of_pred_ip[1]) >> 8;
+            lookup[7] = htons(blocks_of_pred_ip[2]) >> 8;
+            lookup[8] = htons(blocks_of_pred_ip[3]) >> 8; 
+            lookup[9] = htons(succ_port) & 0xFF;
+            lookup[10] = htons(succ_port) >> 8;
+        //UDP: send msg to pred addr    
+        char r_port [4];
+        sprintf(r_port,"%d",request_port);
+        struct sockaddr_in request_addr = derive_sockaddr("127.0.0.1",r_port); 
+
+        sendto(udp_socket, lookup, 11, 0, (struct sockaddr *)&request_addr, sizeof(request_addr));
+
+    }
     else // lookup forward
     {    
 

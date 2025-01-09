@@ -251,12 +251,12 @@ void add_hash(struct responsible_addr* dht_table, uint16_t port, char *ip){
  *
  * @return
  */
-void reply_lookup(int udp_socket,uint16_t hash_id){
+void reply_lookup(int udp_socket,uint16_t hash_id, uint16_t request_id, uint16_t request_port){
     char lookup[BUFSIZ];
     // clear the Buffers
     memset(lookup, 0, BUFSIZ);
     //lookup reply 
-    if(hash_id <= self_id)
+    if(is_responsible(hash_id))
     {
         int blocks_of_pred_ip [4];
         getDecValueOfIP4v(self_ip,blocks_of_pred_ip);
@@ -271,28 +271,12 @@ void reply_lookup(int udp_socket,uint16_t hash_id){
             lookup[8] = htons(blocks_of_pred_ip[3]) >> 8; 
             lookup[9] = htons(self_port) & 0xFF;
             lookup[10] = htons(self_port) >> 8;
-        //UDP: send msg to pred addr           
-        sendto(udp_socket, lookup, 11, 0, (struct sockaddr *)&pred_addr, sizeof(pred_addr));
+        //UDP: send msg to pred addr    
+        char r_port [4];
+        sprintf(r_port,"%d",request_port);
+        struct sockaddr_in request_addr = derive_sockaddr("127.0.0.1",r_port); 
 
-    }
-    else if(hash_id <= succ_id)
-    {
-        int blocks_of_pred_ip [4];
-        getDecValueOfIP4v(succ_ip,blocks_of_pred_ip);
-            lookup[0] = htons(1)>> 8;
-            lookup[1] = htons(self_id) & 0xFF;
-            lookup[2] = htons(self_id) >> 8;
-            lookup[3] = htons(succ_id) & 0xFF;
-            lookup[4] = htons(succ_id) >> 8;
-            lookup[5] = htons(blocks_of_pred_ip[0]) >> 8;
-            lookup[6] = htons(blocks_of_pred_ip[1]) >> 8;
-            lookup[7] = htons(blocks_of_pred_ip[2]) >> 8;
-            lookup[8] = htons(blocks_of_pred_ip[3]) >> 8; 
-            lookup[9] = htons(succ_port) & 0xFF;
-            lookup[10] = htons(succ_port) >> 8;
-        //UDP: send msg to pred addr           
-        sendto(udp_socket, lookup, 11, 0, (struct sockaddr *)&pred_addr, sizeof(pred_addr));
-
+        sendto(udp_socket, lookup, 11, 0, (struct sockaddr *)&request_addr, sizeof(request_addr));
 
     }
     else // lookup forward
@@ -304,14 +288,14 @@ void reply_lookup(int udp_socket,uint16_t hash_id){
             lookup[0] = htons(0)>> 8;
             lookup[1] = hash_id >> 8;
             lookup[2] = hash_id & 0xFF;
-            lookup[3] = htons(pred_id) & 0xFF;
-            lookup[4] = htons(pred_id) >> 8;
+            lookup[3] = htons(request_id) & 0xFF;
+            lookup[4] = htons(request_id) >> 8;
             lookup[5] = htons(blocks_of_self_ip[0]) >> 8;
             lookup[6] = htons(blocks_of_self_ip[1]) >> 8;
             lookup[7] = htons(blocks_of_self_ip[2]) >> 8;
             lookup[8] = htons(blocks_of_self_ip[3]) >> 8; 
-            lookup[9] = htons(pred_port) & 0xFF;
-            lookup[10] = htons(pred_port) >> 8;
+            lookup[9] = htons(request_port) & 0xFF;
+            lookup[10] = htons(request_port) >> 8;
         //UDP: send msg to succ addr             
         sendto(udp_socket, lookup, 11, 0, (struct sockaddr *)&succ_addr, sizeof(succ_addr));
 
@@ -746,9 +730,15 @@ int main(int argc, char **argv)
                     uint8_t hash1 = buffer [1];
                     uint8_t hash2 = buffer [2];
                     uint16_t hash_id = ((uint16_t)hash1 << 8) | hash2;
-                    reply_lookup(udp_socket,hash_id);
+                    uint8_t id1 = buffer [3];
+                    uint8_t id2 = buffer [4];
+                    uint16_t id_request = ((uint16_t)id1 << 8) | id2;
+                    uint8_t port1 = buffer [9];
+                    uint8_t port2 = buffer [10];
+                    uint16_t port_request = ((uint16_t)port1 << 8) | port2;
+                    reply_lookup(udp_socket,hash_id, id_request, port_request);
                 }
-                else if(check > 0 && buffer[0] == 1) //recv reply add the responiple node into the lookuptable
+                else if(check > 0 && buffer[0] == 1) //recv reply add the responsiple node into the lookuptable
                 {
                     uint8_t port1 = buffer [9];
                     uint8_t port2 = buffer [10];

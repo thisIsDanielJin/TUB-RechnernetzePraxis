@@ -78,7 +78,7 @@ def test_listen(static_peer):
 
 
 @pytest.mark.timeout(1)
-@pytest.mark.parametrize("uri", ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'])
+@pytest.mark.parametrize("uri", ['a', 'b', 'c', 'd', 'aa', 'ab', 'ac', 'ad'])
 def test_immediate_dht(static_peer, uri):
     """Test hashing of request (1.2)
     Run peer in minimal (non-trivial) DHT

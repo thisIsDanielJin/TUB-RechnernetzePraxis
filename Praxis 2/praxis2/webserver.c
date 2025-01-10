@@ -363,6 +363,16 @@ size_t process_packet(int udp_socket,int conn, char *buffer, size_t n)
                                 lookuptable[index].ip, lookuptable[index].port, request.uri);
                 send(conn, redirect_buf, len, 0);
             }
+            else if (!is_responsible(uri_hash) && succ_addr.sin_port == pred_addr.sin_port)
+            {
+                char redirect_buf[HTTP_MAX_SIZE];
+                int len = snprintf(redirect_buf, sizeof(redirect_buf),
+                                "HTTP/1.1 303 See Other\r\n"
+                                "Location: http://%.9s:%d%s\r\n"
+                                "Content-Length: 0\r\n\r\n",
+                                succ_ip, succ_port, request.uri);
+                send(conn, redirect_buf, len, 0);
+            }
             // Check responsibility
             else if (!is_responsible(uri_hash) && have_succ)
             {

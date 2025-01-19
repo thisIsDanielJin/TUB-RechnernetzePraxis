@@ -1,0 +1,10 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "BUILD ALL",
+            "command": "cmake -B build -D CMAKE_BUILD_TYPE=Debug && make -C build",
+            "type": "shell"
+        }
+    ]
+}

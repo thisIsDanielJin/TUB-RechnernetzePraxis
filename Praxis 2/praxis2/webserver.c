@@ -455,7 +455,7 @@ int main(int argc, char **argv)
         exit(EXIT_FAILURE);
     }
 
-    // Create an array of pollfd structures to monitor sockets.
+    // Create an array of pollfd structures to monitor sockets
     struct pollfd sockets[2] = {
         {.fd = server_socket, .events = POLLIN},
     };

@@ -18,7 +18,17 @@
 
 #define MAX_RESOURCES 100
 
+// struct that saves the redirection addr
+struct responsible_addr
+{
+    uint16_t hash;
+    uint16_t port;
+    char ip[INET_ADDRSTRLEN];
+};
+
 static uint16_t self_id = 0;
+static char self_ip[INET_ADDRSTRLEN] = {0};
+static uint16_t self_port = 0;
 static uint16_t pred_id = 0;
 static char pred_ip[INET_ADDRSTRLEN] = {0};
 static uint16_t pred_port = 0;
@@ -26,8 +36,14 @@ static uint16_t succ_id = 0;
 static char succ_ip[INET_ADDRSTRLEN] = {0};
 static uint16_t succ_port = 0;
 
+static struct sockaddr_in succ_addr;
+static struct sockaddr_in pred_addr;
+
 static int have_pred = 0;
 static int have_succ = 0;
+
+int lookup_index = 0;
+static struct responsible_addr lookuptable[10];
 
 struct tuple resources[MAX_RESOURCES] = {
     {"/static/foo", "Foo", sizeof "Foo" - 1},
@@ -136,6 +152,186 @@ static int is_responsible(uint16_t key)
 }
 
 /**
+ * Derives a sockaddr_in structure from the provided host and port information.
+ *
+ * @param host The host (IP address or hostname) to be resolved into a network
+ * address.
+ * @param port The port number to be converted into network byte order.
+ *
+ * @return A sockaddr_in structure representing the network address derived from
+ * the host and port.
+ */
+static struct sockaddr_in derive_sockaddr(const char *host, const char *port)
+{
+    struct addrinfo hints = {
+        .ai_family = AF_INET,
+    };
+    struct addrinfo *result_info;
+
+    // Resolve the host (IP address or hostname) into a list of possible
+    // addresses.
+    int returncode = getaddrinfo(host, port, &hints, &result_info);
+    if (returncode)
+    {
+        fprintf(stderr, "Error parsing host/port");
+        exit(EXIT_FAILURE);
+    }
+
+    // Copy the sockaddr_in structure from the first address in the list
+    struct sockaddr_in result = *((struct sockaddr_in *)result_info->ai_addr);
+
+    // Free the allocated memory for the result_info
+    freeaddrinfo(result_info);
+    return result;
+}
+/**
+ * Example IPv4 127.0.0.1 gets converted into [127][0][0][1]
+ *
+ * @param ipAddres IPv4 as an string
+ * @param ip_dec a buffer where the INT Values are safed
+ *
+ * @return
+ */
+void getDecValueOfIP4v(char *ipAddress, int *ip_dec)
+{
+    size_t j = 0;
+    size_t k = 0;
+    for (size_t i = 0; i < strlen(ipAddress); i++)
+    {
+        if (ipAddress[i] == '.')
+        {
+            char temp[INET_ADDRSTRLEN - 1];
+            strncpy(temp, ipAddress + k, i + 1 - k);
+            k = i + 1;
+            ip_dec[j] = atoi(temp);
+            j++;
+        }
+    }
+    char temp[INET_ADDRSTRLEN - 1];
+    strncpy(temp, ipAddress + k, 4);
+    ip_dec[j] = atoi(temp);
+    return;
+}
+/**
+ * Searches if the hash_id is in the lookuptable.
+ *
+ * @param dht_table lookuptable for hash_ids
+ * @param hash_id the hash_id we're looking for in the lookuptable
+ *
+ * @return IF the hash_id is in the lookuptable it returns the index in lookuptable. Else -1.
+ */
+ssize_t search_hash(struct responsible_addr *dht_table, uint16_t hash_id)
+{
+    for (int i = 0; i < 10; i++)
+    {
+        if (dht_table[i].hash == hash_id)
+        {
+            return i;
+        }
+    }
+    return -1;
+}
+/**
+ * Adds hash_id into the lookuptable.
+ *
+ * @param dht_table lookuptable for hash_ids
+ * @param responsible_node the responsible_node for the hash_id, with the port and the IP4v
+ *
+ * @return
+ */
+void add_hash(struct responsible_addr *dht_table, uint16_t port, char *ip)
+{
+    dht_table[lookup_index].port = port;
+    strncpy(dht_table[lookup_index].ip, ip, 9);
+    lookup_index++;
+    if (lookup_index == 10)
+    {
+        lookup_index = 0;
+    }
+}
+
+/**
+ * Send lookup reply or forward lookup
+ *
+ * @param udp_socket fd of udp_socket
+ * @param hash_id hash_id from the lookup
+ *
+ * @return
+ */
+void reply_lookup(int udp_socket, uint16_t hash_id, uint16_t request_id, uint16_t request_port)
+{
+    char lookup[BUFSIZ];
+    // clear the Buffers
+    memset(lookup, 0, BUFSIZ);
+    // lookup reply
+    if (is_responsible(hash_id))
+    {
+        int blocks_of_pred_ip[4];
+        getDecValueOfIP4v(self_ip, blocks_of_pred_ip);
+        lookup[0] = htons(1) >> 8;
+        lookup[1] = htons(pred_id) & 0xFF;
+        lookup[2] = htons(pred_id) >> 8;
+        lookup[3] = htons(self_id) & 0xFF;
+        lookup[4] = htons(self_id) >> 8;
+        lookup[5] = htons(blocks_of_pred_ip[0]) >> 8;
+        lookup[6] = htons(blocks_of_pred_ip[1]) >> 8;
+        lookup[7] = htons(blocks_of_pred_ip[2]) >> 8;
+        lookup[8] = htons(blocks_of_pred_ip[3]) >> 8;
+        lookup[9] = htons(self_port) & 0xFF;
+        lookup[10] = htons(self_port) >> 8;
+        // UDP: send msg to pred addr
+        char r_port[4];
+        sprintf(r_port, "%d", request_port);
+        struct sockaddr_in request_addr = derive_sockaddr("127.0.0.1", r_port);
+
+        sendto(udp_socket, lookup, 11, 0, (struct sockaddr *)&request_addr, sizeof(request_addr));
+    }
+    else if (hash_id > self_id && hash_id <= succ_id)
+    {
+        int blocks_of_pred_ip[4];
+        getDecValueOfIP4v(self_ip, blocks_of_pred_ip);
+        lookup[0] = htons(1) >> 8;
+        lookup[1] = htons(self_id) & 0xFF;
+        lookup[2] = htons(self_id) >> 8;
+        lookup[3] = htons(succ_id) & 0xFF;
+        lookup[4] = htons(succ_id) >> 8;
+        lookup[5] = htons(blocks_of_pred_ip[0]) >> 8;
+        lookup[6] = htons(blocks_of_pred_ip[1]) >> 8;
+        lookup[7] = htons(blocks_of_pred_ip[2]) >> 8;
+        lookup[8] = htons(blocks_of_pred_ip[3]) >> 8;
+        lookup[9] = htons(succ_port) & 0xFF;
+        lookup[10] = htons(succ_port) >> 8;
+        // UDP: send msg to pred addr
+        char r_port[4];
+        sprintf(r_port, "%d", request_port);
+        struct sockaddr_in request_addr = derive_sockaddr("127.0.0.1", r_port);
+
+        sendto(udp_socket, lookup, 11, 0, (struct sockaddr *)&request_addr, sizeof(request_addr));
+    }
+    else // lookup forward
+    {
+
+        char lookup[HTTP_MAX_SIZE];
+        int blocks_of_self_ip[4];
+        getDecValueOfIP4v(pred_ip, blocks_of_self_ip);
+        lookup[0] = htons(0) >> 8;
+        lookup[1] = hash_id >> 8;
+        lookup[2] = hash_id & 0xFF;
+        lookup[3] = htons(request_id) & 0xFF;
+        lookup[4] = htons(request_id) >> 8;
+        lookup[5] = htons(blocks_of_self_ip[0]) >> 8;
+        lookup[6] = htons(blocks_of_self_ip[1]) >> 8;
+        lookup[7] = htons(blocks_of_self_ip[2]) >> 8;
+        lookup[8] = htons(blocks_of_self_ip[3]) >> 8;
+        lookup[9] = htons(request_port) & 0xFF;
+        lookup[10] = htons(request_port) >> 8;
+        // UDP: send msg to succ addr
+        sendto(udp_socket, lookup, 11, 0, (struct sockaddr *)&succ_addr, sizeof(succ_addr));
+    }
+    return;
+}
+
+/**
  * Processes an incoming packet from the client.
  *
  * @param conn The socket descriptor representing the connection to the client.
@@ -148,7 +344,7 @@ static int is_responsible(uint16_t key)
  * malformed or an error occurs during processing, the return value is -1.
  *
  */
-size_t process_packet(int conn, char *buffer, size_t n)
+size_t process_packet(int udp_socket, int conn, char *buffer, size_t n)
 {
     struct request request = {
         .method = NULL, .uri = NULL, .payload = NULL, .payload_length = -1};
@@ -160,23 +356,78 @@ size_t process_packet(int conn, char *buffer, size_t n)
 
         if (strcmp(request.method, "GET") == 0)
         {
-            // Check responsibility
-            if (!is_responsible(uri_hash) && have_succ)
+            // Not responsible -> redirect
+            ssize_t index = search_hash(lookuptable, uri_hash);
+            if (index > -1)
             {
-                // Not responsible -> redirect
-                char redirect[HTTP_MAX_SIZE];
-                int len = snprintf(redirect, sizeof(redirect),
+                char redirect_buf[HTTP_MAX_SIZE];
+                int len = snprintf(redirect_buf, sizeof(redirect_buf),
                                    "HTTP/1.1 303 See Other\r\n"
-                                   "Location: http://%s:%u%s\r\n"
+                                   "Location: http://%.9s:%d%s\r\n"
+                                   "Content-Length: 0\r\n\r\n",
+                                   lookuptable[index].ip, lookuptable[index].port, request.uri);
+                send(conn, redirect_buf, len, 0);
+            }
+            else if (!is_responsible(uri_hash) && succ_addr.sin_port == pred_addr.sin_port)
+            {
+                char redirect_buf[HTTP_MAX_SIZE];
+                int len = snprintf(redirect_buf, sizeof(redirect_buf),
+                                   "HTTP/1.1 303 See Other\r\n"
+                                   "Location: http://%.9s:%d%s\r\n"
                                    "Content-Length: 0\r\n\r\n",
                                    succ_ip, succ_port, request.uri);
-                send(conn, redirect, len, 0);
-                return -1;
+                send(conn, redirect_buf, len, 0);
+            }
+            // Check responsibility
+            else if (!is_responsible(uri_hash) && have_succ)
+            {
+                // 503: Service Unavailable-Antwort
+                char no_service[HTTP_MAX_SIZE];
+                int no_service_len = snprintf(no_service, sizeof(no_service),
+                                              "HTTP/1.1 503 Service Unavailable\r\n"
+                                              "Retry-After: 1\r\n"
+                                              "Content-Length: 0\r\n\r\n");
+                send(conn, no_service, no_service_len, 0);
+
+                if (index < 0)
+                {
+                    lookuptable[lookup_index].hash = uri_hash;
+
+                    char lookup[BUFSIZ];
+                    memset(lookup, 0, BUFSIZ);
+                    int blocks_of_self_ip[4];
+                    getDecValueOfIP4v(self_ip, blocks_of_self_ip);
+                    lookup[0] = htons(0) >> 8;
+                    lookup[1] = htons(uri_hash) & 0xFF;
+                    lookup[2] = htons(uri_hash) >> 8;
+                    lookup[3] = htons(self_id) & 0xFF;
+                    lookup[4] = htons(self_id) >> 8;
+                    lookup[5] = htons(blocks_of_self_ip[0]) >> 8;
+                    lookup[6] = htons(blocks_of_self_ip[1]) >> 8;
+                    lookup[7] = htons(blocks_of_self_ip[2]) >> 8;
+                    lookup[8] = htons(blocks_of_self_ip[3]) >> 8;
+                    lookup[9] = htons(self_port) & 0xFF;
+                    lookup[10] = htons(self_port) >> 8;
+
+                    // UDP: send msg to succ addr
+                    int bytessend_udp;
+                    bytessend_udp = sendto(udp_socket, lookup, 11, 0, (struct sockaddr *)&succ_addr, sizeof(succ_addr));
+                    if (bytessend_udp < 1)
+                    {
+                        perror("sendto succ");
+                        exit(EXIT_FAILURE);
+                    }
+                }
+            }
+            else
+            {
+                send_reply(conn, &request);
             }
         }
-
-        send_reply(conn, &request);
-
+        else
+        {
+            send_reply(conn, &request);
+        }
         // Check the "Connection" header in the request to determine if the
         // connection should be kept alive or closed.
         const string connection_header = get_header(&request, "Connection");
@@ -248,7 +499,7 @@ char *buffer_discard(char *buffer, size_t discard, size_t keep)
  * false otherwise. If an error occurs while receiving data from the socket, the
  * function exits the program.
  */
-bool handle_connection(struct connection_state *state)
+bool handle_connection(struct connection_state *state, int udp_socket)
 {
     // Calculate the pointer to the end of the buffer to avoid buffer overflow
     const char *buffer_end = state->buffer + HTTP_MAX_SIZE;
@@ -271,7 +522,7 @@ bool handle_connection(struct connection_state *state)
     char *window_end = state->end + bytes_read;
 
     ssize_t bytes_processed = 0;
-    while ((bytes_processed = process_packet(state->sock, window_start,
+    while ((bytes_processed = process_packet(udp_socket, state->sock, window_start,
                                              window_end - window_start)) > 0)
     {
         window_start += bytes_processed;
@@ -284,40 +535,6 @@ bool handle_connection(struct connection_state *state)
     state->end = buffer_discard(state->buffer, window_start - state->buffer,
                                 window_end - window_start);
     return true;
-}
-
-/**
- * Derives a sockaddr_in structure from the provided host and port information.
- *
- * @param host The host (IP address or hostname) to be resolved into a network
- * address.
- * @param port The port number to be converted into network byte order.
- *
- * @return A sockaddr_in structure representing the network address derived from
- * the host and port.
- */
-static struct sockaddr_in derive_sockaddr(const char *host, const char *port)
-{
-    struct addrinfo hints = {
-        .ai_family = AF_INET,
-    };
-    struct addrinfo *result_info;
-
-    // Resolve the host (IP address or hostname) into a list of possible
-    // addresses.
-    int returncode = getaddrinfo(host, port, &hints, &result_info);
-    if (returncode)
-    {
-        fprintf(stderr, "Error parsing host/port");
-        exit(EXIT_FAILURE);
-    }
-
-    // Copy the sockaddr_in structure from the first address in the list
-    struct sockaddr_in result = *((struct sockaddr_in *)result_info->ai_addr);
-
-    // Free the allocated memory for the result_info
-    freeaddrinfo(result_info);
-    return result;
 }
 
 /**
@@ -377,6 +594,42 @@ static int setup_server_socket(struct sockaddr_in addr)
 }
 
 /**
+ * Sets up a UDP server socket and binds it to the provided sockaddr_in address.
+ *
+ * @param addr The sockaddr_in structure representing the IP address and port of
+ * the server.
+ *
+ * @return The file descriptor of the created UDP server socket.
+ */
+static int setup_udp_socket(struct sockaddr_in addr)
+{
+    const int enable_udp = 1;
+
+    int udp_socket = socket(AF_INET, SOCK_DGRAM, 0);
+    if (udp_socket == -1)
+    {
+        perror("socket(UDP)");
+        exit(EXIT_FAILURE);
+    }
+
+    if (setsockopt(udp_socket, SOL_SOCKET, SO_REUSEADDR, &enable_udp, sizeof(enable_udp)) == -1)
+    {
+        perror("setsockopt(UDP)");
+        close(udp_socket);
+        exit(EXIT_FAILURE);
+    }
+
+    if (bind(udp_socket, (struct sockaddr *)&addr, sizeof(addr)) == -1)
+    {
+        perror("bind(UDP)");
+        close(udp_socket);
+        exit(EXIT_FAILURE);
+    }
+
+    return udp_socket;
+}
+
+/**
  *  The program expects 3; otherwise, it returns EXIT_FAILURE.
  *
  *  Call as:
@@ -392,7 +645,10 @@ int main(int argc, char **argv)
 
     if (argc == 4)
     {
-        self_id = safe_strtoul(argv[3], NULL, 10, "Invalid self ID");
+        char *endptr;
+        strncpy(self_ip, argv[1], INET_ADDRSTRLEN - 1);
+        self_port = safe_strtoul(argv[2], NULL, 10, "Invalid self Port");
+        self_id = safe_strtoul(argv[3], &endptr, 10, "Invalid self ID");
     }
     else
     {
@@ -432,33 +688,25 @@ int main(int argc, char **argv)
 
     // Set up a server socket.
     int server_socket = setup_server_socket(addr);
+    // Set up a udp_socket.
+    int udp_socket = setup_udp_socket(addr);
 
-    int udp_socket = socket(AF_INET, SOCK_DGRAM, 0);
-    if (udp_socket == -1)
+    if (have_succ)
     {
-        perror("socket(UDP)");
-        exit(EXIT_FAILURE);
+        char s_port[4];
+        sprintf(s_port, "%d", succ_port);
+        succ_addr = derive_sockaddr(succ_ip, s_port);
+    }
+    if (have_pred)
+    {
+        char p_port[4];
+        sprintf(p_port, "%d", pred_port);
+        pred_addr = derive_sockaddr(pred_ip, p_port);
     }
 
-    int enable = 1;
-    if (setsockopt(udp_socket, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(enable)) == -1)
-    {
-        perror("setsockopt(UDP)");
-        close(udp_socket);
-        exit(EXIT_FAILURE);
-    }
-
-    if (bind(udp_socket, (struct sockaddr *)&addr, sizeof(addr)) == -1)
-    {
-        perror("bind(UDP)");
-        close(udp_socket);
-        exit(EXIT_FAILURE);
-    }
-
-    // Create an array of pollfd structures to monitor sockets
-    struct pollfd sockets[2] = {
-        {.fd = server_socket, .events = POLLIN},
-    };
+    // Create an array of pollfd structures to monitor sockets.
+    struct pollfd sockets[3] = {
+        {.fd = server_socket, .events = POLLIN}, {.fd = -1, .events = 0}, {.fd = udp_socket, .events = POLLIN}};
 
     struct connection_state state = {0};
     while (true)
@@ -506,13 +754,44 @@ int main(int argc, char **argv)
                     sockets[1].events = POLLIN;
                 }
             }
+            else if (s == udp_socket)
+            { // handle incomming msg onto the UDP Socket
+                uint8_t buffer[BUFSIZ];
+                // clear the buffer
+                memset(buffer, 0, BUFSIZ);
+
+                // bytesread from recv() of udpsocket
+                ssize_t check = recv(s, buffer, 11, 0);
+
+                if (check > 0 && buffer[0] == 0) // reply lookup
+                {
+                    uint8_t hash1 = buffer[1];
+                    uint8_t hash2 = buffer[2];
+                    uint16_t hash_id = ((uint16_t)hash1 << 8) | hash2;
+                    uint8_t id1 = buffer[3];
+                    uint8_t id2 = buffer[4];
+                    uint16_t id_request = ((uint16_t)id1 << 8) | id2;
+                    uint8_t port1 = buffer[9];
+                    uint8_t port2 = buffer[10];
+                    uint16_t port_request = ((uint16_t)port1 << 8) | port2;
+                    reply_lookup(udp_socket, hash_id, id_request, port_request);
+                }
+                else if (check > 0 && buffer[0] == 1) // recv reply add the responsiple node into the lookuptable
+                {
+                    uint8_t port1 = buffer[9];
+                    uint8_t port2 = buffer[10];
+                    uint16_t port_reply = ((uint16_t)port1 << 8) | port2;
+                    char *ip_reply = "127.0.0.1";
+                    add_hash(lookuptable, port_reply, ip_reply);
+                }
+            }
             else
             {
                 assert(s == state.sock);
 
                 // Call the 'handle_connection' function to process the incoming
                 // data on the socket.
-                bool cont = handle_connection(&state);
+                bool cont = handle_connection(&state, udp_socket);
                 if (!cont)
                 { // get ready for a new connection
                     sockets[0].events = POLLIN;

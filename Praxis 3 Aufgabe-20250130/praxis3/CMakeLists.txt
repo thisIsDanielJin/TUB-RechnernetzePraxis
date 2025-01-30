@@ -2,9 +2,6 @@ cmake_minimum_required(VERSION 3.5)
 project(RN-Praxis)
 set(CMAKE_C_STANDARD 11)
 
-# Add ZMQ headers and library paths
-include_directories(/opt/homebrew/include)
-link_directories(/opt/homebrew/lib)
 
 find_library(ZeroMQ zmq REQUIRED)
 

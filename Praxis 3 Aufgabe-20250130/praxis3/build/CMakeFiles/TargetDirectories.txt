@@ -1,0 +1,6 @@
+/home/daniel-jin/Desktop/TUB-RechnernetzePraxis/Praxis 3 Aufgabe-20250130/praxis3/build/CMakeFiles/zmq_distributor.dir
+/home/daniel-jin/Desktop/TUB-RechnernetzePraxis/Praxis 3 Aufgabe-20250130/praxis3/build/CMakeFiles/zmq_worker.dir
+/home/daniel-jin/Desktop/TUB-RechnernetzePraxis/Praxis 3 Aufgabe-20250130/praxis3/build/CMakeFiles/package.dir
+/home/daniel-jin/Desktop/TUB-RechnernetzePraxis/Praxis 3 Aufgabe-20250130/praxis3/build/CMakeFiles/package_source.dir
+/home/daniel-jin/Desktop/TUB-RechnernetzePraxis/Praxis 3 Aufgabe-20250130/praxis3/build/CMakeFiles/edit_cache.dir
+/home/daniel-jin/Desktop/TUB-RechnernetzePraxis/Praxis 3 Aufgabe-20250130/praxis3/build/CMakeFiles/rebuild_cache.dir

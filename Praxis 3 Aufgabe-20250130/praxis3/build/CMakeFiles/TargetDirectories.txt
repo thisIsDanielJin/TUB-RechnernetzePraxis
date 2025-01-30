@@ -1,6 +1,0 @@
-/Users/danielwodke/Dropbox/Uni/Semester_9/Rechnernetze und Verteilte Systeme/Praxis/Praxis 3 Aufgabe-20250130/praxis3/build/CMakeFiles/zmq_distributor.dir
-/Users/danielwodke/Dropbox/Uni/Semester_9/Rechnernetze und Verteilte Systeme/Praxis/Praxis 3 Aufgabe-20250130/praxis3/build/CMakeFiles/zmq_worker.dir
-/Users/danielwodke/Dropbox/Uni/Semester_9/Rechnernetze und Verteilte Systeme/Praxis/Praxis 3 Aufgabe-20250130/praxis3/build/CMakeFiles/package.dir
-/Users/danielwodke/Dropbox/Uni/Semester_9/Rechnernetze und Verteilte Systeme/Praxis/Praxis 3 Aufgabe-20250130/praxis3/build/CMakeFiles/package_source.dir
-/Users/danielwodke/Dropbox/Uni/Semester_9/Rechnernetze und Verteilte Systeme/Praxis/Praxis 3 Aufgabe-20250130/praxis3/build/CMakeFiles/edit_cache.dir
-/Users/danielwodke/Dropbox/Uni/Semester_9/Rechnernetze und Verteilte Systeme/Praxis/Praxis 3 Aufgabe-20250130/praxis3/build/CMakeFiles/rebuild_cache.dir

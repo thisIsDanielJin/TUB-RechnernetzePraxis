@@ -1,6 +1,0 @@
-numpy>=1.20.3
-pandas
-requests
-zmq
-pytest
-pytest-timeout

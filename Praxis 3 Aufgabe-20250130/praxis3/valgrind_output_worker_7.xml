@@ -7,18 +7,18 @@
 
 <preamble>
   <line>Memcheck, a memory error detector</line>
-  <line>Copyright (C) 2002-2022, and GNU GPL'd, by Julian Seward et al.</line>
-  <line>Using Valgrind-3.20.0 and LibVEX; rerun with -h for copyright info</line>
+  <line>Copyright (C) 2002-2017, and GNU GPL'd, by Julian Seward et al.</line>
+  <line>Using Valgrind-3.18.1 and LibVEX; rerun with -h for copyright info</line>
   <line>Command: build/zmq_worker 6008</line>
 </preamble>
 
-<pid>29495</pid>
-<ppid>29493</ppid>
+<pid>42170</pid>
+<ppid>42168</ppid>
 <tool>memcheck</tool>
 
 <args>
   <vargv>
-    <exe>/usr/local/bin/valgrind</exe>
+    <exe>/usr/bin/valgrind.bin</exe>
     <arg>--tool=memcheck</arg>
     <arg>--xml=yes</arg>
     <arg>--xml-file=valgrind_output_worker_7.xml</arg>
@@ -38,166 +38,74 @@
 
 <status>
   <state>RUNNING</state>
-  <time>00:00:00:00.166 </time>
-</status>
-
-<fatal_signal>
-  <tid>1</tid>
-  <signo>2</signo>
-  <signame>SIGINT</signame>
-  <sicode>128</sicode>
-  <siaddr>0x0</siaddr>
-  <stack>
-    <frame>
-      <ip>0x4A2EBCD</ip>
-      <obj>/usr/lib/x86_64-linux-gnu/libc.so.6</obj>
-      <fn>poll</fn>
-      <dir>./io/../sysdeps/unix/sysv/linux</dir>
-      <file>poll.c</file>
-      <line>29</line>
-    </frame>
-    <frame>
-      <ip>0x48AF205</ip>
-      <obj>/usr/lib/x86_64-linux-gnu/libzmq.so.5.2.4</obj>
-    </frame>
-    <frame>
-      <ip>0x48CBB03</ip>
-      <obj>/usr/lib/x86_64-linux-gnu/libzmq.so.5.2.4</obj>
-    </frame>
-    <frame>
-      <ip>0x48CC0AB</ip>
-      <obj>/usr/lib/x86_64-linux-gnu/libzmq.so.5.2.4</obj>
-    </frame>
-    <frame>
-      <ip>0x48E1987</ip>
-      <obj>/usr/lib/x86_64-linux-gnu/libzmq.so.5.2.4</obj>
-      <fn>zmq_recv</fn>
-    </frame>
-    <frame>
-      <ip>0x1099FC</ip>
-      <obj>/home/daniel-jin/Desktop/TUB-RechnernetzePraxis/Praxis 3 Aufgabe-20250130/praxis3/build/zmq_worker</obj>
-      <fn>main</fn>
-      <dir>/home/daniel-jin/Desktop/TUB-RechnernetzePraxis/Praxis 3 Aufgabe-20250130/praxis3</dir>
-      <file>zmq_worker.c</file>
-      <line>131</line>
-    </frame>
-  </stack>
-</fatal_signal>
-
-
-<status>
-  <state>FINISHED</state>
-  <time>00:00:01:57.378 </time>
+  <time>00:00:00:00.184 </time>
 </status>
 
 <error>
-  <unique>0x2c</unique>
+  <unique>0x0</unique>
   <tid>1</tid>
-  <kind>Leak_PossiblyLost</kind>
-  <xwhat>
-    <text>640 bytes in 2 blocks are possibly lost in loss record 45 of 64</text>
-    <leakedbytes>640</leakedbytes>
-    <leakedblocks>2</leakedblocks>
-  </xwhat>
+  <kind>InvalidWrite</kind>
+  <what>Invalid write of size 1</what>
   <stack>
     <frame>
-      <ip>0x484D444</ip>
-      <obj>/usr/local/libexec/valgrind/vgpreload_memcheck-amd64-linux.so</obj>
-      <fn>calloc</fn>
-      <dir>/home/daniel-jin/Downloads/coregrind/../valgrind-3.20.0/coregrind/m_replacemalloc</dir>
-      <file>vg_replace_malloc.c</file>
-      <line>1340</line>
+      <ip>0x484EA4C</ip>
+      <obj>/usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so</obj>
+      <fn>strcat</fn>
     </frame>
     <frame>
-      <ip>0x40147D9</ip>
-      <obj>/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2</obj>
-      <fn>calloc</fn>
-      <dir>./elf/../include</dir>
-      <file>rtld-malloc.h</file>
-      <line>44</line>
+      <ip>0x109780</ip>
+      <obj>/mnt/c/Martin_files/martin_škola/UNIVERZITA/TU_INF/3.Semester/RNVS/HA/Praxis3/TUB-RechnernetzePraxis/Praxis 3 Aufgabe-20250130/praxis3/build/zmq_worker</obj>
+      <fn>process_reduce</fn>
+      <dir>/home/daniel-jin/Desktop/TUB-RechnernetzePraxis/Praxis 3 Aufgabe-20250130/praxis3</dir>
+      <file>zmq_worker.c</file>
+      <line>100</line>
     </frame>
     <frame>
-      <ip>0x40147D9</ip>
-      <obj>/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2</obj>
-      <fn>allocate_dtv</fn>
-      <dir>./elf/../elf</dir>
-      <file>dl-tls.c</file>
-      <line>375</line>
-    </frame>
-    <frame>
-      <ip>0x40147D9</ip>
-      <obj>/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2</obj>
-      <fn>_dl_allocate_tls</fn>
-      <dir>./elf/../elf</dir>
-      <file>dl-tls.c</file>
-      <line>634</line>
-    </frame>
-    <frame>
-      <ip>0x49AB7B4</ip>
-      <obj>/usr/lib/x86_64-linux-gnu/libc.so.6</obj>
-      <fn>allocate_stack</fn>
-      <dir>./nptl/./nptl</dir>
-      <file>allocatestack.c</file>
-      <line>430</line>
-    </frame>
-    <frame>
-      <ip>0x49AB7B4</ip>
-      <obj>/usr/lib/x86_64-linux-gnu/libc.so.6</obj>
-      <fn>pthread_create@@GLIBC_2.34</fn>
-      <dir>./nptl/./nptl</dir>
-      <file>pthread_create.c</file>
-      <line>647</line>
-    </frame>
-    <frame>
-      <ip>0x48D7D78</ip>
-      <obj>/usr/lib/x86_64-linux-gnu/libzmq.so.5.2.4</obj>
-    </frame>
-    <frame>
-      <ip>0x48C35ED</ip>
-      <obj>/usr/lib/x86_64-linux-gnu/libzmq.so.5.2.4</obj>
-    </frame>
-    <frame>
-      <ip>0x48AC157</ip>
-      <obj>/usr/lib/x86_64-linux-gnu/libzmq.so.5.2.4</obj>
-    </frame>
-    <frame>
-      <ip>0x109926</ip>
-      <obj>/home/daniel-jin/Desktop/TUB-RechnernetzePraxis/Praxis 3 Aufgabe-20250130/praxis3/build/zmq_worker</obj>
+      <ip>0x109AE0</ip>
+      <obj>/mnt/c/Martin_files/martin_škola/UNIVERZITA/TU_INF/3.Semester/RNVS/HA/Praxis3/TUB-RechnernetzePraxis/Praxis 3 Aufgabe-20250130/praxis3/build/zmq_worker</obj>
       <fn>main</fn>
       <dir>/home/daniel-jin/Desktop/TUB-RechnernetzePraxis/Praxis 3 Aufgabe-20250130/praxis3</dir>
       <file>zmq_worker.c</file>
-      <line>120</line>
+      <line>148</line>
+    </frame>
+  </stack>
+  <auxwhat>Address 0x5217d9c is 0 bytes after a block of size 1,500 alloc'd</auxwhat>
+  <stack>
+    <frame>
+      <ip>0x4848899</ip>
+      <obj>/usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so</obj>
+      <fn>malloc</fn>
+    </frame>
+    <frame>
+      <ip>0x109608</ip>
+      <obj>/mnt/c/Martin_files/martin_škola/UNIVERZITA/TU_INF/3.Semester/RNVS/HA/Praxis3/TUB-RechnernetzePraxis/Praxis 3 Aufgabe-20250130/praxis3/build/zmq_worker</obj>
+      <fn>process_reduce</fn>
+      <dir>/home/daniel-jin/Desktop/TUB-RechnernetzePraxis/Praxis 3 Aufgabe-20250130/praxis3</dir>
+      <file>zmq_worker.c</file>
+      <line>73</line>
+    </frame>
+    <frame>
+      <ip>0x109AE0</ip>
+      <obj>/mnt/c/Martin_files/martin_škola/UNIVERZITA/TU_INF/3.Semester/RNVS/HA/Praxis3/TUB-RechnernetzePraxis/Praxis 3 Aufgabe-20250130/praxis3/build/zmq_worker</obj>
+      <fn>main</fn>
+      <dir>/home/daniel-jin/Desktop/TUB-RechnernetzePraxis/Praxis 3 Aufgabe-20250130/praxis3</dir>
+      <file>zmq_worker.c</file>
+      <line>148</line>
     </frame>
   </stack>
   <suppression>
     <sname>insert_a_suppression_name_here</sname>
-    <skind>Memcheck:Leak</skind>
-    <skaux>match-leak-kinds: possible</skaux>
-    <sframe> <fun>calloc</fun> </sframe>
-    <sframe> <fun>calloc</fun> </sframe>
-    <sframe> <fun>allocate_dtv</fun> </sframe>
-    <sframe> <fun>_dl_allocate_tls</fun> </sframe>
-    <sframe> <fun>allocate_stack</fun> </sframe>
-    <sframe> <fun>pthread_create@@GLIBC_2.34</fun> </sframe>
-    <sframe> <obj>/usr/lib/x86_64-linux-gnu/libzmq.so.5.2.4</obj> </sframe>
-    <sframe> <obj>/usr/lib/x86_64-linux-gnu/libzmq.so.5.2.4</obj> </sframe>
-    <sframe> <obj>/usr/lib/x86_64-linux-gnu/libzmq.so.5.2.4</obj> </sframe>
+    <skind>Memcheck:Addr1</skind>
+    <sframe> <fun>strcat</fun> </sframe>
+    <sframe> <fun>process_reduce</fun> </sframe>
     <sframe> <fun>main</fun> </sframe>
     <rawtext>
 <![CDATA[
 {
    <insert_a_suppression_name_here>
-   Memcheck:Leak
-   match-leak-kinds: possible
-   fun:calloc
-   fun:calloc
-   fun:allocate_dtv
-   fun:_dl_allocate_tls
-   fun:allocate_stack
-   fun:pthread_create@@GLIBC_2.34
-   obj:/usr/lib/x86_64-linux-gnu/libzmq.so.5.2.4
-   obj:/usr/lib/x86_64-linux-gnu/libzmq.so.5.2.4
-   obj:/usr/lib/x86_64-linux-gnu/libzmq.so.5.2.4
+   Memcheck:Addr1
+   fun:strcat
+   fun:process_reduce
    fun:main
 }
 ]]>
@@ -207,43 +115,370 @@
 
   <suppression>
     <sname>insert_a_suppression_name_here</sname>
-    <skind>Memcheck:Leak</skind>
-    <skaux>match-leak-kinds: possible</skaux>
-    <sframe> <fun>calloc</fun> </sframe>
-    <sframe> <fun>calloc</fun> </sframe>
-    <sframe> <fun>allocate_dtv</fun> </sframe>
-    <sframe> <fun>_dl_allocate_tls</fun> </sframe>
-    <sframe> <fun>allocate_stack</fun> </sframe>
-    <sframe> <fun>pthread_create@@GLIBC_2.34</fun> </sframe>
-    <sframe> <obj>/usr/lib/x86_64-linux-gnu/libzmq.so.5.2.4</obj> </sframe>
-    <sframe> <obj>/usr/lib/x86_64-linux-gnu/libzmq.so.5.2.4</obj> </sframe>
-    <sframe> <obj>/usr/lib/x86_64-linux-gnu/libzmq.so.5.2.4</obj> </sframe>
+    <skind>Memcheck:Addr1</skind>
+    <sframe> <fun>strcat</fun> </sframe>
+    <sframe> <fun>process_reduce</fun> </sframe>
     <sframe> <fun>main</fun> </sframe>
     <rawtext>
 <![CDATA[
 {
    <insert_a_suppression_name_here>
-   Memcheck:Leak
-   match-leak-kinds: possible
-   fun:calloc
-   fun:calloc
-   fun:allocate_dtv
-   fun:_dl_allocate_tls
-   fun:allocate_stack
-   fun:pthread_create@@GLIBC_2.34
-   obj:/usr/lib/x86_64-linux-gnu/libzmq.so.5.2.4
-   obj:/usr/lib/x86_64-linux-gnu/libzmq.so.5.2.4
-   obj:/usr/lib/x86_64-linux-gnu/libzmq.so.5.2.4
+   Memcheck:Addr1
+   fun:strcat
+   fun:process_reduce
    fun:main
 }
 ]]>
     </rawtext>
   </suppression>
-<errorcounts>
-</errorcounts>
+<error>
+  <unique>0x4</unique>
+  <tid>1</tid>
+  <kind>InvalidWrite</kind>
+  <what>Invalid write of size 1</what>
+  <stack>
+    <frame>
+      <ip>0x484EA5E</ip>
+      <obj>/usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so</obj>
+      <fn>strcat</fn>
+    </frame>
+    <frame>
+      <ip>0x109780</ip>
+      <obj>/mnt/c/Martin_files/martin_škola/UNIVERZITA/TU_INF/3.Semester/RNVS/HA/Praxis3/TUB-RechnernetzePraxis/Praxis 3 Aufgabe-20250130/praxis3/build/zmq_worker</obj>
+      <fn>process_reduce</fn>
+      <dir>/home/daniel-jin/Desktop/TUB-RechnernetzePraxis/Praxis 3 Aufgabe-20250130/praxis3</dir>
+      <file>zmq_worker.c</file>
+      <line>100</line>
+    </frame>
+    <frame>
+      <ip>0x109AE0</ip>
+      <obj>/mnt/c/Martin_files/martin_škola/UNIVERZITA/TU_INF/3.Semester/RNVS/HA/Praxis3/TUB-RechnernetzePraxis/Praxis 3 Aufgabe-20250130/praxis3/build/zmq_worker</obj>
+      <fn>main</fn>
+      <dir>/home/daniel-jin/Desktop/TUB-RechnernetzePraxis/Praxis 3 Aufgabe-20250130/praxis3</dir>
+      <file>zmq_worker.c</file>
+      <line>148</line>
+    </frame>
+  </stack>
+  <auxwhat>Address 0x5217da0 is 4 bytes after a block of size 1,500 alloc'd</auxwhat>
+  <stack>
+    <frame>
+      <ip>0x4848899</ip>
+      <obj>/usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so</obj>
+      <fn>malloc</fn>
+    </frame>
+    <frame>
+      <ip>0x109608</ip>
+      <obj>/mnt/c/Martin_files/martin_škola/UNIVERZITA/TU_INF/3.Semester/RNVS/HA/Praxis3/TUB-RechnernetzePraxis/Praxis 3 Aufgabe-20250130/praxis3/build/zmq_worker</obj>
+      <fn>process_reduce</fn>
+      <dir>/home/daniel-jin/Desktop/TUB-RechnernetzePraxis/Praxis 3 Aufgabe-20250130/praxis3</dir>
+      <file>zmq_worker.c</file>
+      <line>73</line>
+    </frame>
+    <frame>
+      <ip>0x109AE0</ip>
+      <obj>/mnt/c/Martin_files/martin_škola/UNIVERZITA/TU_INF/3.Semester/RNVS/HA/Praxis3/TUB-RechnernetzePraxis/Praxis 3 Aufgabe-20250130/praxis3/build/zmq_worker</obj>
+      <fn>main</fn>
+      <dir>/home/daniel-jin/Desktop/TUB-RechnernetzePraxis/Praxis 3 Aufgabe-20250130/praxis3</dir>
+      <file>zmq_worker.c</file>
+      <line>148</line>
+    </frame>
+  </stack>
+  <suppression>
+    <sname>insert_a_suppression_name_here</sname>
+    <skind>Memcheck:Addr1</skind>
+    <sframe> <fun>strcat</fun> </sframe>
+    <sframe> <fun>process_reduce</fun> </sframe>
+    <sframe> <fun>main</fun> </sframe>
+    <rawtext>
+<![CDATA[
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Addr1
+   fun:strcat
+   fun:process_reduce
+   fun:main
+}
+]]>
+    </rawtext>
+  </suppression>
+</error>
 
-<suppcounts>
-</suppcounts>
+  <suppression>
+    <sname>insert_a_suppression_name_here</sname>
+    <skind>Memcheck:Addr1</skind>
+    <sframe> <fun>strcat</fun> </sframe>
+    <sframe> <fun>process_reduce</fun> </sframe>
+    <sframe> <fun>main</fun> </sframe>
+    <rawtext>
+<![CDATA[
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Addr1
+   fun:strcat
+   fun:process_reduce
+   fun:main
+}
+]]>
+    </rawtext>
+  </suppression>
+<error>
+  <unique>0x5</unique>
+  <tid>1</tid>
+  <kind>InvalidRead</kind>
+  <what>Invalid read of size 1</what>
+  <stack>
+    <frame>
+      <ip>0x484EA34</ip>
+      <obj>/usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so</obj>
+      <fn>strcat</fn>
+    </frame>
+    <frame>
+      <ip>0x109780</ip>
+      <obj>/mnt/c/Martin_files/martin_škola/UNIVERZITA/TU_INF/3.Semester/RNVS/HA/Praxis3/TUB-RechnernetzePraxis/Praxis 3 Aufgabe-20250130/praxis3/build/zmq_worker</obj>
+      <fn>process_reduce</fn>
+      <dir>/home/daniel-jin/Desktop/TUB-RechnernetzePraxis/Praxis 3 Aufgabe-20250130/praxis3</dir>
+      <file>zmq_worker.c</file>
+      <line>100</line>
+    </frame>
+    <frame>
+      <ip>0x109AE0</ip>
+      <obj>/mnt/c/Martin_files/martin_škola/UNIVERZITA/TU_INF/3.Semester/RNVS/HA/Praxis3/TUB-RechnernetzePraxis/Praxis 3 Aufgabe-20250130/praxis3/build/zmq_worker</obj>
+      <fn>main</fn>
+      <dir>/home/daniel-jin/Desktop/TUB-RechnernetzePraxis/Praxis 3 Aufgabe-20250130/praxis3</dir>
+      <file>zmq_worker.c</file>
+      <line>148</line>
+    </frame>
+  </stack>
+  <auxwhat>Address 0x5217d9c is 0 bytes after a block of size 1,500 alloc'd</auxwhat>
+  <stack>
+    <frame>
+      <ip>0x4848899</ip>
+      <obj>/usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so</obj>
+      <fn>malloc</fn>
+    </frame>
+    <frame>
+      <ip>0x109608</ip>
+      <obj>/mnt/c/Martin_files/martin_škola/UNIVERZITA/TU_INF/3.Semester/RNVS/HA/Praxis3/TUB-RechnernetzePraxis/Praxis 3 Aufgabe-20250130/praxis3/build/zmq_worker</obj>
+      <fn>process_reduce</fn>
+      <dir>/home/daniel-jin/Desktop/TUB-RechnernetzePraxis/Praxis 3 Aufgabe-20250130/praxis3</dir>
+      <file>zmq_worker.c</file>
+      <line>73</line>
+    </frame>
+    <frame>
+      <ip>0x109AE0</ip>
+      <obj>/mnt/c/Martin_files/martin_škola/UNIVERZITA/TU_INF/3.Semester/RNVS/HA/Praxis3/TUB-RechnernetzePraxis/Praxis 3 Aufgabe-20250130/praxis3/build/zmq_worker</obj>
+      <fn>main</fn>
+      <dir>/home/daniel-jin/Desktop/TUB-RechnernetzePraxis/Praxis 3 Aufgabe-20250130/praxis3</dir>
+      <file>zmq_worker.c</file>
+      <line>148</line>
+    </frame>
+  </stack>
+  <suppression>
+    <sname>insert_a_suppression_name_here</sname>
+    <skind>Memcheck:Addr1</skind>
+    <sframe> <fun>strcat</fun> </sframe>
+    <sframe> <fun>process_reduce</fun> </sframe>
+    <sframe> <fun>main</fun> </sframe>
+    <rawtext>
+<![CDATA[
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Addr1
+   fun:strcat
+   fun:process_reduce
+   fun:main
+}
+]]>
+    </rawtext>
+  </suppression>
+</error>
 
+  <suppression>
+    <sname>insert_a_suppression_name_here</sname>
+    <skind>Memcheck:Addr1</skind>
+    <sframe> <fun>strcat</fun> </sframe>
+    <sframe> <fun>process_reduce</fun> </sframe>
+    <sframe> <fun>main</fun> </sframe>
+    <rawtext>
+<![CDATA[
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Addr1
+   fun:strcat
+   fun:process_reduce
+   fun:main
+}
+]]>
+    </rawtext>
+  </suppression>
+<error>
+  <unique>0x84</unique>
+  <tid>1</tid>
+  <kind>InvalidRead</kind>
+  <what>Invalid read of size 1</what>
+  <stack>
+    <frame>
+      <ip>0x484ED24</ip>
+      <obj>/usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so</obj>
+      <fn>strlen</fn>
+    </frame>
+    <frame>
+      <ip>0x109AF6</ip>
+      <obj>/mnt/c/Martin_files/martin_škola/UNIVERZITA/TU_INF/3.Semester/RNVS/HA/Praxis3/TUB-RechnernetzePraxis/Praxis 3 Aufgabe-20250130/praxis3/build/zmq_worker</obj>
+      <fn>main</fn>
+      <dir>/home/daniel-jin/Desktop/TUB-RechnernetzePraxis/Praxis 3 Aufgabe-20250130/praxis3</dir>
+      <file>zmq_worker.c</file>
+      <line>149</line>
+    </frame>
+  </stack>
+  <auxwhat>Address 0x5217d9c is 0 bytes after a block of size 1,500 alloc'd</auxwhat>
+  <stack>
+    <frame>
+      <ip>0x4848899</ip>
+      <obj>/usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so</obj>
+      <fn>malloc</fn>
+    </frame>
+    <frame>
+      <ip>0x109608</ip>
+      <obj>/mnt/c/Martin_files/martin_škola/UNIVERZITA/TU_INF/3.Semester/RNVS/HA/Praxis3/TUB-RechnernetzePraxis/Praxis 3 Aufgabe-20250130/praxis3/build/zmq_worker</obj>
+      <fn>process_reduce</fn>
+      <dir>/home/daniel-jin/Desktop/TUB-RechnernetzePraxis/Praxis 3 Aufgabe-20250130/praxis3</dir>
+      <file>zmq_worker.c</file>
+      <line>73</line>
+    </frame>
+    <frame>
+      <ip>0x109AE0</ip>
+      <obj>/mnt/c/Martin_files/martin_škola/UNIVERZITA/TU_INF/3.Semester/RNVS/HA/Praxis3/TUB-RechnernetzePraxis/Praxis 3 Aufgabe-20250130/praxis3/build/zmq_worker</obj>
+      <fn>main</fn>
+      <dir>/home/daniel-jin/Desktop/TUB-RechnernetzePraxis/Praxis 3 Aufgabe-20250130/praxis3</dir>
+      <file>zmq_worker.c</file>
+      <line>148</line>
+    </frame>
+  </stack>
+  <suppression>
+    <sname>insert_a_suppression_name_here</sname>
+    <skind>Memcheck:Addr1</skind>
+    <sframe> <fun>strlen</fun> </sframe>
+    <sframe> <fun>main</fun> </sframe>
+    <rawtext>
+<![CDATA[
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Addr1
+   fun:strlen
+   fun:main
+}
+]]>
+    </rawtext>
+  </suppression>
+</error>
+
+  <suppression>
+    <sname>insert_a_suppression_name_here</sname>
+    <skind>Memcheck:Addr1</skind>
+    <sframe> <fun>strlen</fun> </sframe>
+    <sframe> <fun>main</fun> </sframe>
+    <rawtext>
+<![CDATA[
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Addr1
+   fun:strlen
+   fun:main
+}
+]]>
+    </rawtext>
+  </suppression>
 </valgrindoutput>
-
+  <stack>
+    <frame>
+      <ip>0x4848899</ip>
+      <obj>/usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so</obj>
+      <fn>malloc</fn>
+    </frame>
+    <frame>
+      <ip>0x489A6D0</ip>
+      <obj>/usr/lib/x86_64-linux-gnu/libzmq.so.5.2.4</obj>
+    </frame>
+    <frame>
+      <ip>0x48C95C4</ip>
+      <obj>/usr/lib/x86_64-linux-gnu/libzmq.so.5.2.4</obj>
+      <fn>zmq_send</fn>
+    </frame>
+    <frame>
+      <ip>0x109B24</ip>
+      <obj>/mnt/c/Martin_files/martin_škola/UNIVERZITA/TU_INF/3.Semester/RNVS/HA/Praxis3/TUB-RechnernetzePraxis/Praxis 3 Aufgabe-20250130/praxis3/build/zmq_worker</obj>
+      <fn>main</fn>
+      <dir>/home/daniel-jin/Desktop/TUB-RechnernetzePraxis/Praxis 3 Aufgabe-20250130/praxis3</dir>
+      <file>zmq_worker.c</file>
+      <line>149</line>
+    </frame>
+  </stack>
+  <stack>
+    <frame>
+      <ip>0x4A23E2E</ip>
+      <obj>/usr/lib/x86_64-linux-gnu/libc.so.6</obj>
+      <fn>epoll_wait</fn>
+      <dir>./misc/../sysdeps/unix/sysv/linux</dir>
+      <file>epoll_wait.c</file>
+      <line>30</line>
+    </frame>
+    <frame>
+      <ip>0x48961C5</ip>
+      <obj>/usr/lib/x86_64-linux-gnu/libzmq.so.5.2.4</obj>
+    </frame>
+    <frame>
+      <ip>0x48BDD9F</ip>
+      <obj>/usr/lib/x86_64-linux-gnu/libzmq.so.5.2.4</obj>
+    </frame>
+    <frame>
+      <ip>0x4992AC2</ip>
+      <obj>/usr/lib/x86_64-linux-gnu/libc.so.6</obj>
+      <fn>start_thread</fn>
+      <dir>./nptl/./nptl</dir>
+      <file>pthread_create.c</file>
+      <line>442</line>
+    </frame>
+    <frame>
+      <ip>0x4A23A03</ip>
+      <obj>/usr/lib/x86_64-linux-gnu/libc.so.6</obj>
+      <fn>clone</fn>
+      <dir>./misc/../sysdeps/unix/sysv/linux/x86_64</dir>
+      <file>clone.S</file>
+      <line>100</line>
+    </frame>
+  </stack>
+  <stack>
+    <frame>
+      <ip>0x4A23E2E</ip>
+      <obj>/usr/lib/x86_64-linux-gnu/libc.so.6</obj>
+      <fn>epoll_wait</fn>
+      <dir>./misc/../sysdeps/unix/sysv/linux</dir>
+      <file>epoll_wait.c</file>
+      <line>30</line>
+    </frame>
+    <frame>
+      <ip>0x48961C5</ip>
+      <obj>/usr/lib/x86_64-linux-gnu/libzmq.so.5.2.4</obj>
+    </frame>
+    <frame>
+      <ip>0x48BDD9F</ip>
+      <obj>/usr/lib/x86_64-linux-gnu/libzmq.so.5.2.4</obj>
+    </frame>
+    <frame>
+      <ip>0x4992AC2</ip>
+      <obj>/usr/lib/x86_64-linux-gnu/libc.so.6</obj>
+      <fn>start_thread</fn>
+      <dir>./nptl/./nptl</dir>
+      <file>pthread_create.c</file>
+      <line>442</line>
+    </frame>
+    <frame>
+      <ip>0x4A23A03</ip>
+      <obj>/usr/lib/x86_64-linux-gnu/libc.so.6</obj>
+      <fn>clone</fn>
+      <dir>./misc/../sysdeps/unix/sysv/linux/x86_64</dir>
+      <file>clone.S</file>
+      <line>100</line>
+    </frame>
+  </stack>

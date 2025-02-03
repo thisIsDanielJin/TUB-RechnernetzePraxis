@@ -7,18 +7,18 @@
 
 <preamble>
   <line>Memcheck, a memory error detector</line>
-  <line>Copyright (C) 2002-2022, and GNU GPL'd, by Julian Seward et al.</line>
-  <line>Using Valgrind-3.20.0 and LibVEX; rerun with -h for copyright info</line>
+  <line>Copyright (C) 2002-2017, and GNU GPL'd, by Julian Seward et al.</line>
+  <line>Using Valgrind-3.18.1 and LibVEX; rerun with -h for copyright info</line>
   <line>Command: build/zmq_worker 6005</line>
 </preamble>
 
-<pid>29488</pid>
-<ppid>29487</ppid>
+<pid>42164</pid>
+<ppid>42161</ppid>
 <tool>memcheck</tool>
 
 <args>
   <vargv>
-    <exe>/usr/local/bin/valgrind</exe>
+    <exe>/usr/bin/valgrind.bin</exe>
     <arg>--tool=memcheck</arg>
     <arg>--xml=yes</arg>
     <arg>--xml-file=valgrind_output_worker_4.xml</arg>
@@ -38,7 +38,7 @@
 
 <status>
   <state>RUNNING</state>
-  <time>00:00:00:00.202 </time>
+  <time>00:00:00:00.178 </time>
 </status>
 
 <fatal_signal>
@@ -49,7 +49,7 @@
   <siaddr>0x0</siaddr>
   <stack>
     <frame>
-      <ip>0x4A2EBCD</ip>
+      <ip>0x4A16BCD</ip>
       <obj>/usr/lib/x86_64-linux-gnu/libc.so.6</obj>
       <fn>poll</fn>
       <dir>./io/../sysdeps/unix/sysv/linux</dir>
@@ -57,25 +57,25 @@
       <line>29</line>
     </frame>
     <frame>
-      <ip>0x48AF205</ip>
+      <ip>0x4897205</ip>
       <obj>/usr/lib/x86_64-linux-gnu/libzmq.so.5.2.4</obj>
     </frame>
     <frame>
-      <ip>0x48CBB03</ip>
+      <ip>0x48B3B03</ip>
       <obj>/usr/lib/x86_64-linux-gnu/libzmq.so.5.2.4</obj>
     </frame>
     <frame>
-      <ip>0x48CC0AB</ip>
+      <ip>0x48B40AB</ip>
       <obj>/usr/lib/x86_64-linux-gnu/libzmq.so.5.2.4</obj>
     </frame>
     <frame>
-      <ip>0x48E1987</ip>
+      <ip>0x48C9987</ip>
       <obj>/usr/lib/x86_64-linux-gnu/libzmq.so.5.2.4</obj>
       <fn>zmq_recv</fn>
     </frame>
     <frame>
       <ip>0x1099FC</ip>
-      <obj>/home/daniel-jin/Desktop/TUB-RechnernetzePraxis/Praxis 3 Aufgabe-20250130/praxis3/build/zmq_worker</obj>
+      <obj>/mnt/c/Martin_files/martin_škola/UNIVERZITA/TU_INF/3.Semester/RNVS/HA/Praxis3/TUB-RechnernetzePraxis/Praxis 3 Aufgabe-20250130/praxis3/build/zmq_worker</obj>
       <fn>main</fn>
       <dir>/home/daniel-jin/Desktop/TUB-RechnernetzePraxis/Praxis 3 Aufgabe-20250130/praxis3</dir>
       <file>zmq_worker.c</file>
@@ -87,7 +87,7 @@
 
 <status>
   <state>FINISHED</state>
-  <time>00:00:01:57.407 </time>
+  <time>00:00:00:31.761 </time>
 </status>
 
 <error>
@@ -101,12 +101,9 @@
   </xwhat>
   <stack>
     <frame>
-      <ip>0x484D444</ip>
-      <obj>/usr/local/libexec/valgrind/vgpreload_memcheck-amd64-linux.so</obj>
+      <ip>0x484DA83</ip>
+      <obj>/usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so</obj>
       <fn>calloc</fn>
-      <dir>/home/daniel-jin/Downloads/coregrind/../valgrind-3.20.0/coregrind/m_replacemalloc</dir>
-      <file>vg_replace_malloc.c</file>
-      <line>1340</line>
     </frame>
     <frame>
       <ip>0x40147D9</ip>
@@ -133,7 +130,7 @@
       <line>634</line>
     </frame>
     <frame>
-      <ip>0x49AB7B4</ip>
+      <ip>0x49937B4</ip>
       <obj>/usr/lib/x86_64-linux-gnu/libc.so.6</obj>
       <fn>allocate_stack</fn>
       <dir>./nptl/./nptl</dir>
@@ -141,7 +138,7 @@
       <line>430</line>
     </frame>
     <frame>
-      <ip>0x49AB7B4</ip>
+      <ip>0x49937B4</ip>
       <obj>/usr/lib/x86_64-linux-gnu/libc.so.6</obj>
       <fn>pthread_create@@GLIBC_2.34</fn>
       <dir>./nptl/./nptl</dir>
@@ -149,20 +146,20 @@
       <line>647</line>
     </frame>
     <frame>
-      <ip>0x48D7D78</ip>
+      <ip>0x48BFD78</ip>
       <obj>/usr/lib/x86_64-linux-gnu/libzmq.so.5.2.4</obj>
     </frame>
     <frame>
-      <ip>0x48C35ED</ip>
+      <ip>0x48AB5ED</ip>
       <obj>/usr/lib/x86_64-linux-gnu/libzmq.so.5.2.4</obj>
     </frame>
     <frame>
-      <ip>0x48AC157</ip>
+      <ip>0x4894157</ip>
       <obj>/usr/lib/x86_64-linux-gnu/libzmq.so.5.2.4</obj>
     </frame>
     <frame>
       <ip>0x109926</ip>
-      <obj>/home/daniel-jin/Desktop/TUB-RechnernetzePraxis/Praxis 3 Aufgabe-20250130/praxis3/build/zmq_worker</obj>
+      <obj>/mnt/c/Martin_files/martin_škola/UNIVERZITA/TU_INF/3.Semester/RNVS/HA/Praxis3/TUB-RechnernetzePraxis/Praxis 3 Aufgabe-20250130/praxis3/build/zmq_worker</obj>
       <fn>main</fn>
       <dir>/home/daniel-jin/Desktop/TUB-RechnernetzePraxis/Praxis 3 Aufgabe-20250130/praxis3</dir>
       <file>zmq_worker.c</file>

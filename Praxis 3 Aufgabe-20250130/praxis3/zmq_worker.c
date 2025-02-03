@@ -4,7 +4,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <pthread.h>
-
+//  python3 -m pytest -s test/test_praxis3.py -k test_simple_text
 #define MAX_MSG_SIZE 1500
 #define MAX_WORDS 10000
 
@@ -109,7 +109,7 @@ int main(int argc, char *argv[])
 {
     if (argc < 2)
     {
-        fprintf(stderr, "Usage: %s <port1> <port2> ...\n", argv[0]);
+        //fprintf(stderr, "Usage: %s <port1> <port2> ...\n", argv[0]);
         return EXIT_FAILURE;
     }
 

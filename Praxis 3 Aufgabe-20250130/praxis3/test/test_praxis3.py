@@ -148,7 +148,7 @@ def test_simple_text(program_args):
         worker_procs = util.start_threaded_workers(test_args["worker"], port_list)
         proc_distributor = util.start_distributor([test_args["distributor"], filename_simple] +
                                       port_list)
-
+            
         util.join_workers(worker_procs)
 
         distributor_output, distributor_err = proc_distributor.communicate()
@@ -156,7 +156,8 @@ def test_simple_text(program_args):
 
         if debug_tests:
             util.create_test_debug_output("test_simple_text", num_workers, correct_word_count, distributor_output)
-
+        
+        print(test_args["base_port"])
         assert distributor_output == correct_word_count, f"{num_workers} workers failed simple text test."
 
 

@@ -7,6 +7,7 @@
 //  python3 -m pytest -s test/test_praxis3.py -k test_simple_text
 #define MAX_MSG_SIZE 1500
 #define MAX_WORDS 10000
+#define SEPARATORS " \t\n\r.,;:!?(){}[]<>\"'`~@#$%^&*-_=+/\\|1234567890"
 
 typedef struct
 {
@@ -56,12 +57,12 @@ void add_word(const char *word, const char *value)
 void process_map(const char *text)
 {
     char *copy = strdup(text);
-    char *token = strtok(copy, " \t\n\r.,;:!?()-");
+    char *token = strtok(copy, SEPARATORS);
     while (token != NULL)
     {
         to_lower(token);
         add_word(token, "1");
-        token = strtok(NULL, " \t\n\r.,;:!?()-");
+        token = strtok(NULL, SEPARATORS);
     }
     free(copy);
 }
@@ -70,7 +71,7 @@ char *process_reduce(const char *data)
 {
     char *copy = strdup(data);
     char *token = strtok(copy, ",");
-    char *output = malloc(MAX_MSG_SIZE);
+    char *output = malloc(MAX_MSG_SIZE+1);
     output[0] = '\0';
 
     while (token != NULL)
@@ -107,6 +108,7 @@ char *process_reduce(const char *data)
 // Worker-Hauptfunktion
 int main(int argc, char *argv[])
 {
+    //printf("[DEBUG] Worker started on port %s\n", argv[1]);
     if (argc < 2)
     {
         //fprintf(stderr, "Usage: %s <port1> <port2> ...\n", argv[0]);
@@ -140,12 +142,34 @@ int main(int argc, char *argv[])
 
             if (strcmp(type, "map") == 0)
             {
+                word_count_size = 0;
+                memset(word_counts, 0, sizeof(word_counts));
                 process_map(payload);
-                zmq_send(sockets[i], "", 0, 0);
+                char map_result[MAX_MSG_SIZE] = "";
+
+                for (int k = 0; k < word_count_size; k++)
+                {
+                    char word[512];
+                    word[511] = '\0';
+                    snprintf(word, sizeof(word), "%s:", word_counts[k].key);
+                    for (int j = 0; j < word_counts[k].value; j++) {
+                        strcat(word, "1");
+                    }
+                    strcat(map_result, word);
+                    strcat(map_result, ",");
+                }
+                map_result[MAX_MSG_SIZE-1] = '\0';
+                //printf("SENDING MAP: %s\n\n\n\n\n\n",map_result);
+                zmq_send(sockets[i], map_result, strlen(map_result), 0);
             }
             else if (strcmp(type, "red") == 0)
             {
+                //printf("RECEIVED FIRST WORDS: %s\n\n\n\n\n\n",payload);
+                word_count_size = 0;
+                memset(word_counts, 0, sizeof(word_counts));
                 char *result = process_reduce(payload);
+                result[MAX_MSG_SIZE-1] = '\0';
+                //printf("RESULT: %s\n\n\n\n\n\n",result);
                 zmq_send(sockets[i], result, strlen(result), 0);
                 free(result);
             }

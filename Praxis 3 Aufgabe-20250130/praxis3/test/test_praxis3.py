@@ -156,8 +156,7 @@ def test_simple_text(program_args):
 
         if debug_tests:
             util.create_test_debug_output("test_simple_text", num_workers, correct_word_count, distributor_output)
-        
-        print(test_args["base_port"])
+    
         assert distributor_output == correct_word_count, f"{num_workers} workers failed simple text test."
 
 
@@ -190,7 +189,7 @@ def test_complex_text(program_args):
 
         if debug_tests:
             util.create_test_debug_output("test_complex_text", num_workers, correct_word_count, distributor_output)
-
+        
         assert distributor_output == correct_word_count, f"{num_workers} workers failed complex text test."
 
 

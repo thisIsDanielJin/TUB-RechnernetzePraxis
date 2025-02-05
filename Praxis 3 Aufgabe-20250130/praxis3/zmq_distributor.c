@@ -42,14 +42,17 @@ void* process_final_results(const char* data){
     int i = 0;
     int len = strlen(data);
     while (i < len) {
+        if(!(isalpha(data[i])) && !(isdigit(data[i]))){
+            return NULL;
+        }
         int start = i;
         while (i < len && isalpha(data[i])) {
             i++;
         }
         int wordLen = i - start;
-        char tempWord[100];
+        char tempWord[wordLen +1];
         if (wordLen > 0) {
-            strncpy(tempWord, data + start, wordLen);
+            strncpy(tempWord, data + start, wordLen); //strncpy not memory safe
             tempWord[wordLen] = '\0';
         }
         int count = 0;
@@ -83,7 +86,6 @@ void *worker_simultaneous_task(void* Worker){
     char * message = temp->message;
     int size = temp->chunk_size;
 
-
     // Antworten empfangen und verarbeiten
     int message_beginning = 0;
     while (message_beginning < size) {
@@ -94,23 +96,27 @@ void *worker_simultaneous_task(void* Worker){
         while (message_end > message_beginning && !isalpha(message[message_end])) {
             message_end--;
         }
+
+        // MAP-Phase
         char buffer_send[MAX_MSG_SIZE];
         snprintf(buffer_send, sizeof(buffer_send), "map%.*s", message_end-message_beginning, message+message_beginning);
-
         printf("Worker sending chunk: [%d]\n", message_end-message_beginning);
         zmq_send(socket, buffer_send, strlen(buffer_send), 0);
         message_beginning = message_end + 1;
-
+        //MAP recv
         char buffer[MAX_MSG_SIZE - 3];
         zmq_recv(socket, buffer, MAX_MSG_SIZE, 0);
-        buffer[MAX_MSG_SIZE-1] = '\0';
+        buffer[MAX_MSG_SIZE - 4] = '\0';
+
         // Reduce-Phase
         char reduce_data[MAX_MSG_SIZE];
-        char new_buffer[MAX_MSG_SIZE];
         snprintf(reduce_data, sizeof(reduce_data), "red%s", buffer);
         zmq_send(socket, reduce_data, strlen(reduce_data), 0);
+        //Reduce recv
+        char new_buffer[MAX_MSG_SIZE];
         zmq_recv(socket, new_buffer, MAX_MSG_SIZE, 0);
         new_buffer[MAX_MSG_SIZE-1] = '\0';
+
         process_final_results(new_buffer);
     }
     return NULL;

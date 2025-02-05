@@ -44,17 +44,17 @@ void add_word(KeyValue *word_counts, size_t *word_count_size,const char *word, c
     {
         word_counts[*word_count_size].key = strdup(word);
         word_counts[*word_count_size].value = strdup(value);
-        *word_count_size++;
+        *word_count_size = *word_count_size + 1;
     }
     else
     {
         //realloc memory so that we can't get a buffer overflow in strcat
-        int *ptr = realloc(word_counts[index].value,1);
+        char *ptr = realloc(word_counts[index].value,1);
         if(ptr == NULL){
             fprintf(stderr, "Memory reallocation failed\n");
             return;
         }
-        strcat(word_counts[index].value, value); 
+        strcat(ptr, value); 
     }
     //pthread_mutex_unlock(&word_counts_mutex);
     return;
@@ -68,7 +68,7 @@ void process_map(const char *text, char* output ) //TODO MULTI-Thread DANGER
     size_t *word_ptr = &word_count_size; 
 
     char *copy = strdup(text);
-    char *saveptr;
+    char *saveptr = NULL;
     char *token = __strtok_r(copy, "0123456789 \t\n\r.,;:!?()-_+=/*`~@#%^&*[]{}<>|\\\"'", &saveptr);
     output[0] = '\0';
 
@@ -83,6 +83,7 @@ void process_map(const char *text, char* output ) //TODO MULTI-Thread DANGER
     for(size_t i = 0; i < word_count_size; i++){
         char buffer[MAX_MSG_SIZE-3];
         snprintf(buffer, sizeof(buffer), "%s%s", word_counts[i].key, word_counts[i].value);
+        printf("%s", buffer);
         if(strlen(buffer) > (MAX_MSG_SIZE - 3 - strlen(output) - 1)){
             printf("No enough space.\n");
         }
@@ -162,7 +163,7 @@ int main(int argc, char *argv[])
             {
                 char output[MAX_MSG_SIZE-3];
                 process_map(payload,output);
-                printf("Sending %s\n", output);
+                //printf("Sending %s\n", output);
                 zmq_send(sockets[i], output, strlen(output), 0);
             }
             else if (strcmp(type, "red") == 0)

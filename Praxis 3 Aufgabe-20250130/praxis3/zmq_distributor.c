@@ -93,16 +93,18 @@ void *worker_simultaneous_task(void* Worker){
         if (message_end >= size){
             message_end = size;
         }
-        while (message_end > message_beginning && !isalpha(message[message_end])) {
-            message_end--;
+        while (message_end > message_beginning && isalpha(message[message_end])) {
+            --message_end;
         }
 
         // MAP-Phase
         char buffer_send[MAX_MSG_SIZE];
-        snprintf(buffer_send, sizeof(buffer_send), "map%.*s", message_end-message_beginning, message+message_beginning);
-        printf("Worker sending chunk: [%d]\n", message_end-message_beginning);
-        zmq_send(socket, buffer_send, strlen(buffer_send), 0);
-        message_beginning = message_end + 1;
+        //if((message_end-message_beginning) > 0){
+            snprintf(buffer_send, sizeof(buffer_send), "map%.*s", message_end-message_beginning, message+message_beginning);
+            printf("Worker sending chunk: [%d]\n", message_end-message_beginning);
+            zmq_send(socket, buffer_send, strlen(buffer_send), 0);
+            message_beginning = message_end + 1;
+        //}
         //MAP recv
         char buffer[MAX_MSG_SIZE - 3];
         zmq_recv(socket, buffer, MAX_MSG_SIZE, 0);
@@ -135,6 +137,10 @@ int main(int argc, char *argv[])
 
     // Datei einlesen
     FILE *file = fopen(argv[1], "r");
+    if(file == NULL){
+        fprintf(stderr, "Failed to pen File");
+        return EXIT_FAILURE;
+    }
     fseek(file, 0, SEEK_END);
     long file_size = ftell(file);
     rewind(file);
@@ -198,10 +204,10 @@ int main(int argc, char *argv[])
 
     // Sortieren und Ausgabe
     qsort(word_counts, word_count_size, sizeof(WordCount), compare);
-    printf("word,frequency\n");
+    fprintf(stdout,"word,frequency\n");
     for (int i = 0; i < word_count_size; i++)
     {
-        printf("%s,%d\n", word_counts[i].word, word_counts[i].count);
+        fprintf(stdout, "%s,%d\n", word_counts[i].word, word_counts[i].count);
     }
 
     //Worker herunterfahren

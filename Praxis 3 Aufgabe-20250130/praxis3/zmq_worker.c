@@ -83,9 +83,9 @@ void process_map(const char *text, char* output ) //TODO MULTI-Thread DANGER
     for(size_t i = 0; i < word_count_size; i++){
         char buffer[MAX_MSG_SIZE-3];
         snprintf(buffer, sizeof(buffer), "%s%s", word_counts[i].key, word_counts[i].value);
-        printf("%s", buffer);
         if(strlen(buffer) > (MAX_MSG_SIZE - 3 - strlen(output) - 1)){
-            printf("No enough space.\n");
+            fprintf(stderr, "No enough space.\n");
+            return;
         }
         strncat(output, buffer, MAX_MSG_SIZE - 3 - strlen(output) - 1);
     }
@@ -130,7 +130,7 @@ int main(int argc, char *argv[])
 {
     if (argc < 2)
     {
-        //fprintf(stderr, "Usage: %s <port1> <port2> ...\n", argv[0]);
+        fprintf(stderr, "Usage: %s <port1> <port2> ...\n", argv[0]);
         return EXIT_FAILURE;
     }
 
@@ -163,7 +163,6 @@ int main(int argc, char *argv[])
             {
                 char output[MAX_MSG_SIZE-3];
                 process_map(payload,output);
-                //printf("Sending %s\n", output);
                 zmq_send(sockets[i], output, strlen(output), 0);
             }
             else if (strcmp(type, "red") == 0)

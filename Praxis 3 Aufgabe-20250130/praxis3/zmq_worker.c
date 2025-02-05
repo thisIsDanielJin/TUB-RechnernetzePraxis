@@ -4,19 +4,18 @@
 #include <string.h>
 #include <ctype.h>
 #include <pthread.h>
-
+//  python3 -m pytest -s test/test_praxis3.py -k test_simple_text
 #define MAX_MSG_SIZE 1500
 #define MAX_WORDS 10000
 
 typedef struct
 {
     char *key;
-    int value;
+    char *value;
 } KeyValue;
 
-// Hashmap zur Speicherung der Wortfrequenzen
-KeyValue word_counts[MAX_WORDS];
-int word_count_size = 0;
+//pthread_mutex_t word_counts_mutex = PTHREAD_MUTEX_INITIALIZER;
+//pthread_mutex_t output_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 // Hilfsfunktionen
 void to_lower(char *str)
@@ -25,9 +24,9 @@ void to_lower(char *str)
         *str = tolower(*str);
 }
 
-int find_word_index(const char *word)
+int find_word_index(KeyValue *word_counts, size_t *word_count_size, const char *word)
 {
-    for (int i = 0; i < word_count_size; i++)
+    for (size_t i = 0; i < *word_count_size; i++)
     {
         if (strcmp(word_counts[i].key, word) == 0)
         {
@@ -37,79 +36,100 @@ int find_word_index(const char *word)
     return -1;
 }
 
-void add_word(const char *word, const char *value)
+void add_word(KeyValue *word_counts, size_t *word_count_size,const char *word, const char *value)
 {
-    int index = find_word_index(word);
+    //pthread_mutex_lock(&word_counts_mutex);
+    int index = find_word_index(word_counts, word_count_size, word);
     if (index == -1)
     {
-        word_counts[word_count_size].key = strdup(word);
-        word_counts[word_count_size].value = strlen(value);
-        word_count_size++;
+        word_counts[*word_count_size].key = strdup(word);
+        word_counts[*word_count_size].value = strdup(value);
+        *word_count_size++;
     }
     else
     {
-        word_counts[index].value += strlen(value);
+        //realloc memory so that we can't get a buffer overflow in strcat
+        int *ptr = realloc(word_counts[index].value,1);
+        if(ptr == NULL){
+            fprintf(stderr, "Memory reallocation failed\n");
+            return;
+        }
+        strcat(word_counts[index].value, value); 
     }
+    //pthread_mutex_unlock(&word_counts_mutex);
+    return;
 }
 
 // Verarbeitung von Map- und Reduce-Anfragen
-void process_map(const char *text)
+void process_map(const char *text, char* output ) //TODO MULTI-Thread DANGER
 {
-    char *copy = strdup(text);
-    char *token = strtok(copy, " \t\n\r.,;:!?()-");
-    while (token != NULL)
-    {
-        to_lower(token);
-        add_word(token, "1");
-        token = strtok(NULL, " \t\n\r.,;:!?()-");
-    }
-    free(copy);
-}
+    KeyValue word_counts[MAX_MSG_SIZE];         
+    size_t word_count_size = 0;
+    size_t *word_ptr = &word_count_size; 
 
-char *process_reduce(const char *data)
-{
-    char *copy = strdup(data);
-    char *token = strtok(copy, ",");
-    char *output = malloc(MAX_MSG_SIZE);
+    char *copy = strdup(text);
+    char *saveptr;
+    char *token = __strtok_r(copy, "0123456789 \t\n\r.,;:!?()-_+=/*`~@#%^&*[]{}<>|\\\"'", &saveptr);
     output[0] = '\0';
 
     while (token != NULL)
     {
-        char word[256];
-        char value_str[256];
-        if (sscanf(token, "%255[^:]:%255s", word, value_str) == 2)
-        {
-            int value = strlen(value_str);
-            int index = find_word_index(word);
-            if (index != -1)
-            {
-                word_counts[index].value += value;
-            }
-            else
-            {
-                add_word(word, value_str);
-            }
+        to_lower(token);
+        add_word(word_counts, word_ptr, token, "1");
+        token = __strtok_r(NULL, "0123456789 \t\n\r.,;:!?()-_+=/*`~@#%^&*[]{}<>|\\\"'", &saveptr);
+    }
+
+    //pthread_mutex_lock(&output_mutex);
+    for(size_t i = 0; i < word_count_size; i++){
+        char buffer[MAX_MSG_SIZE-3];
+        snprintf(buffer, sizeof(buffer), "%s%s", word_counts[i].key, word_counts[i].value);
+        if(strlen(buffer) > (MAX_MSG_SIZE - 3 - strlen(output) - 1)){
+            printf("No enough space.\n");
         }
-        token = strtok(NULL, ",");
+        strncat(output, buffer, MAX_MSG_SIZE - 3 - strlen(output) - 1);
     }
+    //pthread_mutex_unlock(&output_mutex);
 
-    for (int i = 0; i < word_count_size; i++)
-    {
-        char entry[512];
-        snprintf(entry, sizeof(entry), "%s:%d,", word_counts[i].key, word_counts[i].value);
-        strcat(output, entry);
+    //free allocated memory
+    for(size_t k = 0; k < word_count_size; k++){
+        free(word_counts[k].key);
+        free(word_counts[k].value);
     }
-
     free(copy);
-    return output;
+    return;
 }
+
+void process_reduce(const char *data, char* output) {
+    int count = 0;
+    size_t j = 0;
+
+    for (size_t i = 0; i < strlen(data); i++) {
+        if (data[i] == '1') {
+            count++;
+        } else {
+            if (count > 0) {
+                output[j++] = count + '0';
+                count = 0;
+            }
+            output[j++] = data[i];
+        }
+    }
+
+    if (count > 0) {
+        output[j++] = count + '0';
+    }
+
+    output[j] = '\0';
+    return;
+}
+
 
 // Worker-Hauptfunktion
 int main(int argc, char *argv[])
 {
     if (argc < 2)
     {
-        fprintf(stderr, "Usage: %s <port1> <port2> ...\n", argv[0]);
+        //fprintf(stderr, "Usage: %s <port1> <port2> ...\n", argv[0]);
         return EXIT_FAILURE;
     }
 
@@ -140,14 +160,16 @@ int main(int argc, char *argv[])
 
             if (strcmp(type, "map") == 0)
             {
-                process_map(payload);
-                zmq_send(sockets[i], "", 0, 0);
+                char output[MAX_MSG_SIZE-3];
+                process_map(payload,output);
+                printf("Sending %s\n", output);
+                zmq_send(sockets[i], output, strlen(output), 0);
             }
             else if (strcmp(type, "red") == 0)
             {
-                char *result = process_reduce(payload);
-                zmq_send(sockets[i], result, strlen(result), 0);
-                free(result);
+                char output[MAX_MSG_SIZE-3];
+                process_reduce(payload, output);
+                zmq_send(sockets[i], output, strlen(output), 0);
             }
             else if (strcmp(type, "rip") == 0)
             {

@@ -38,9 +38,9 @@ int compare(const void *a, const void *b)
 }
 
 // Verarbeitung der Reduce-Ergebnisse
-void* process_final_results(const char* data){
+void* process_final_results(const char* data, int len){
     int i = 0;
-    int len = strlen(data);
+    //int len = strlen(data);
     while (i < len) {
         if(!(isalpha(data[i])) && !(isdigit(data[i]))){
             return NULL;
@@ -89,24 +89,26 @@ void *worker_simultaneous_task(void* Worker){
     // Antworten empfangen und verarbeiten
     int message_beginning = 0;
     while (message_beginning < size) {
-        int message_end = message_beginning + MAX_MSG_SIZE - 3;
+        int message_end = message_beginning + MAX_MSG_SIZE - 4;
         if (message_end >= size){
             message_end = size;
         }
         while (message_end > message_beginning && isalpha(message[message_end])) {
-            --message_end;
+            message_end--;
         }
 
         // MAP-Phase
         char buffer_send[MAX_MSG_SIZE];
-        snprintf(buffer_send, sizeof(buffer_send), "map%.*s", message_end-message_beginning, message+message_beginning);
+        //printf("%c", message[message_end]);
+        int n = snprintf(buffer_send, sizeof(buffer_send), "map%.*s", message_end-message_beginning + 1, message+message_beginning);
         //printf("Worker sending chunk: [%d]\n", message_end-message_beginning);
-        zmq_send(socket, buffer_send, strlen(buffer_send), 0);
+        zmq_send(socket, buffer_send, n, 0);
         message_beginning = message_end + 1;
 
         //MAP recv
-        char buffer[MAX_MSG_SIZE - 3];
-        int recv_bytes_map = zmq_recv(socket, buffer, MAX_MSG_SIZE - 3, 0);
+        char buffer[MAX_MSG_SIZE];
+        int recv_bytes_map = zmq_recv(socket, buffer, MAX_MSG_SIZE, 0);
+        buffer[recv_bytes_map] = '\0';
 
         // Reduce-Phase
         char reduce_data[recv_bytes_map + 4];
@@ -114,11 +116,11 @@ void *worker_simultaneous_task(void* Worker){
         zmq_send(socket, reduce_data, strlen(reduce_data), 0);
 
         //Reduce recv
-        char new_buffer[MAX_MSG_SIZE - 3];
-        int recv_bytes_reduce = zmq_recv(socket, new_buffer, MAX_MSG_SIZE - 3, 0);
+        char new_buffer[MAX_MSG_SIZE];
+        int recv_bytes_reduce = zmq_recv(socket, new_buffer, MAX_MSG_SIZE, 0);
         new_buffer[recv_bytes_reduce] = '\0';
 
-        process_final_results(new_buffer);
+        process_final_results(new_buffer, recv_bytes_reduce);
     }
     return NULL;
     //pthread_exit(NULL);
@@ -137,7 +139,7 @@ int main(int argc, char *argv[])
     // Datei einlesen
     FILE *file = fopen(argv[1], "r");
     if(file == NULL){
-        fprintf(stderr, "Failed to pen File");
+        fprintf(stderr, "Failed to open File");
         return EXIT_FAILURE;
     }
     fseek(file, 0, SEEK_END);
@@ -164,18 +166,21 @@ int main(int argc, char *argv[])
 
     // Text in Chunks aufteilen und senden
     int chunk_size = file_size / num_workers;
+    int total_chunck_size = 0;
     Threaddata Workers[num_workers];
     for (int i = 0; i < num_workers; i++)
     {
-        char *chunk = text + i * chunk_size;
+        char *chunk = text + total_chunck_size;
 
         if (i == num_workers - 1) {
-            chunk_size = file_size - i * chunk_size;
+            chunk_size = file_size - total_chunck_size;
         }
 
-        while (chunk_size > 0 && !strchr("0123456789 \t\n\r.,;:!?()-_+=/*`~@#%^&*[]{}<>|\\\"'", chunk[chunk_size])) {
+        while (chunk_size > 0 && isalpha(chunk[chunk_size])) {
             chunk_size--;
         }
+
+        total_chunck_size += chunk_size;
 
         char *message = malloc(chunk_size + 1);
         snprintf(message, chunk_size + 1, "%.*s", chunk_size, chunk);

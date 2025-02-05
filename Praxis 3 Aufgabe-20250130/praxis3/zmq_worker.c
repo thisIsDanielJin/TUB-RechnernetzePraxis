@@ -18,6 +18,16 @@ typedef struct
 //pthread_mutex_t output_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 // Hilfsfunktionen
+void generate_non_alpha_ascii(char *output) {
+    int j = 0;
+    for (int i = 1; i < 128; i++) { // ASCII-Werte von 0 bis 127
+        if (!isalpha(i) && j < 76) {
+            output[j++] = (char)i;
+        }
+    }
+    output[j] = '\0';
+}
+
 void to_lower(char *str)
 {
     for (; *str; ++str)
@@ -69,14 +79,16 @@ void process_map(const char *text, char* output ) //TODO MULTI-Thread DANGER
 
     char *copy = strdup(text);
     char *saveptr = NULL;
-    char *token = __strtok_r(copy, "0123456789 \t\n\r.,;:!?()-_+=/*`~@#%^&*[]{}<>|\\\"'", &saveptr);
+    char none_ascii[77];
+    generate_non_alpha_ascii(none_ascii);
+    char *token = __strtok_r(copy, none_ascii, &saveptr);
     output[0] = '\0';
 
     while (token != NULL)
     {
         to_lower(token);
         add_word(word_counts, word_ptr, token, "1");
-        token = __strtok_r(NULL, "0123456789 \t\n\r.,;:!?()-_+=/*`~@#%^&*[]{}<>|\\\"'", &saveptr);
+        token = __strtok_r(NULL, none_ascii, &saveptr);
     }
 
     //pthread_mutex_lock(&output_mutex);

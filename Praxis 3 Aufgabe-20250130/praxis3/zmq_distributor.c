@@ -99,25 +99,24 @@ void *worker_simultaneous_task(void* Worker){
 
         // MAP-Phase
         char buffer_send[MAX_MSG_SIZE];
-        //if((message_end-message_beginning) > 0){
-            snprintf(buffer_send, sizeof(buffer_send), "map%.*s", message_end-message_beginning, message+message_beginning);
-            printf("Worker sending chunk: [%d]\n", message_end-message_beginning);
-            zmq_send(socket, buffer_send, strlen(buffer_send), 0);
-            message_beginning = message_end + 1;
-        //}
+        snprintf(buffer_send, sizeof(buffer_send), "map%.*s", message_end-message_beginning, message+message_beginning);
+        //printf("Worker sending chunk: [%d]\n", message_end-message_beginning);
+        zmq_send(socket, buffer_send, strlen(buffer_send), 0);
+        message_beginning = message_end + 1;
+
         //MAP recv
         char buffer[MAX_MSG_SIZE - 3];
-        zmq_recv(socket, buffer, MAX_MSG_SIZE, 0);
-        buffer[MAX_MSG_SIZE - 4] = '\0';
+        int recv_bytes_map = zmq_recv(socket, buffer, MAX_MSG_SIZE - 3, 0);
 
         // Reduce-Phase
-        char reduce_data[MAX_MSG_SIZE];
+        char reduce_data[recv_bytes_map + 4];
         snprintf(reduce_data, sizeof(reduce_data), "red%s", buffer);
         zmq_send(socket, reduce_data, strlen(reduce_data), 0);
+
         //Reduce recv
-        char new_buffer[MAX_MSG_SIZE];
-        zmq_recv(socket, new_buffer, MAX_MSG_SIZE, 0);
-        new_buffer[MAX_MSG_SIZE-1] = '\0';
+        char new_buffer[MAX_MSG_SIZE - 3];
+        int recv_bytes_reduce = zmq_recv(socket, new_buffer, MAX_MSG_SIZE - 3, 0);
+        new_buffer[recv_bytes_reduce] = '\0';
 
         process_final_results(new_buffer);
     }
@@ -187,11 +186,6 @@ int main(int argc, char *argv[])
 
         free(message);
         free(Workers[i].message);
-        //printf("word,frequency\n");
-        //for (int i = 0; i < word_count_size; i++)
-        //{
-        //    printf("%s,%d\n", word_counts[i].word, word_counts[i].count);
-        //}
         //pthread_create(&threads[i], NULL, worker_simultaneous_task,(void*)&Workers[i]);
     }
 

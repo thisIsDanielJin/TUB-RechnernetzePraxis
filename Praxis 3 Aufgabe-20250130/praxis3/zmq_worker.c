@@ -92,17 +92,18 @@ void process_map(const char *text, char* output ) //TODO MULTI-Thread DANGER
     }
 
     //pthread_mutex_lock(&output_mutex);
+    size_t size = 0;
     for(size_t i = 0; i < word_count_size; i++){
         char buffer[MAX_MSG_SIZE-3];
-        snprintf(buffer, sizeof(buffer), "%s%s", word_counts[i].key, word_counts[i].value);
+        size += snprintf(buffer, sizeof(buffer), "%s%s", word_counts[i].key, word_counts[i].value);
         if(strlen(buffer) > (MAX_MSG_SIZE - 3 - strlen(output) - 1)){
             fprintf(stderr, "No enough space.\n");
             return;
         }
         strncat(output, buffer, MAX_MSG_SIZE - 3 - strlen(output) - 1);
     }
+    output[size] = '\0';
     //pthread_mutex_unlock(&output_mutex);
-
     //free allocated memory
     for(size_t k = 0; k < word_count_size; k++){
         free(word_counts[k].key);
@@ -175,17 +176,17 @@ int main(int argc, char *argv[])
             {
                 char output[MAX_MSG_SIZE-3];
                 process_map(payload,output);
-                zmq_send(sockets[i], output, strlen(output), 0);
+                zmq_send(sockets[i], output, strlen(output) + 1, 0);
             }
             else if (strcmp(type, "red") == 0)
             {
                 char output[MAX_MSG_SIZE-3];
                 process_reduce(payload, output);
-                zmq_send(sockets[i], output, strlen(output), 0);
+                zmq_send(sockets[i], output, strlen(output) + 1, 0);
             }
             else if (strcmp(type, "rip") == 0)
             {
-                zmq_send(sockets[i], "rip", 3, 0);
+                zmq_send(sockets[i], "rip", 4, 0);
                 zmq_close(sockets[i]);
                 zmq_ctx_destroy(context);
                 return EXIT_SUCCESS;

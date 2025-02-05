@@ -100,25 +100,25 @@ void *worker_simultaneous_task(void* Worker){
         // MAP-Phase
         char buffer_send[MAX_MSG_SIZE];
         //printf("%c", message[message_end]);
-        int n = snprintf(buffer_send, sizeof(buffer_send), "map%.*s", message_end-message_beginning + 1, message+message_beginning);
+        int copy_map = snprintf(buffer_send, sizeof(buffer_send), "map%.*s", message_end-message_beginning, message+message_beginning);
         //printf("Worker sending chunk: [%d]\n", message_end-message_beginning);
-        zmq_send(socket, buffer_send, n, 0);
+        zmq_send(socket, buffer_send, copy_map + 1, 0);
         message_beginning = message_end + 1;
 
         //MAP recv
         char buffer[MAX_MSG_SIZE];
         int recv_bytes_map = zmq_recv(socket, buffer, MAX_MSG_SIZE, 0);
-        buffer[recv_bytes_map] = '\0';
+        //buffer[recv_bytes_map] = '\0';
 
         // Reduce-Phase
         char reduce_data[recv_bytes_map + 4];
-        snprintf(reduce_data, sizeof(reduce_data), "red%s", buffer);
-        zmq_send(socket, reduce_data, strlen(reduce_data), 0);
+        int copy_red = snprintf(reduce_data, sizeof(reduce_data), "red%s", buffer);
+        zmq_send(socket, reduce_data, copy_red + 1, 0);
 
         //Reduce recv
         char new_buffer[MAX_MSG_SIZE];
         int recv_bytes_reduce = zmq_recv(socket, new_buffer, MAX_MSG_SIZE, 0);
-        new_buffer[recv_bytes_reduce] = '\0';
+        //new_buffer[recv_bytes_reduce] = '\0';
 
         process_final_results(new_buffer, recv_bytes_reduce);
     }
@@ -212,7 +212,7 @@ int main(int argc, char *argv[])
     //Worker herunterfahren
     for (int i = 0; i < num_workers; i++)
     {
-        zmq_send(sockets[i], "rip", 3, 0);
+        zmq_send(sockets[i], "rip", 4, 0);
         char buffer[MAX_MSG_SIZE];
         zmq_recv(sockets[i], buffer, MAX_MSG_SIZE, 0);
         zmq_close(sockets[i]);

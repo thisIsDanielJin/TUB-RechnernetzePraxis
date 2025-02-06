@@ -203,15 +203,8 @@ int main(int argc, char *argv[])
 
     // Sortieren und Ausgabe
     qsort(word_counts, word_count_size, sizeof(WordCount), compare);
-    fprintf(stdout,"word,frequency\n");
-    for (int i = 0; i < word_count_size; i++)
-    {
-        fprintf(stdout, "%s,%d\n", word_counts[i].word, word_counts[i].count);
-        //free word_count[...].word
-        free(word_counts[i].word);
-    }
-
-
+    
+    
     //Worker herunterfahren
     for (int i = 0; i < num_workers; i++)
     {
@@ -220,8 +213,15 @@ int main(int argc, char *argv[])
         zmq_recv(sockets[i], buffer, MAX_MSG_SIZE, 0);
         zmq_close(sockets[i]);
     }
-
     zmq_ctx_destroy(context);
+    
+    fprintf(stdout,"word,frequency\n");
+    for (int i = 0; i < word_count_size; i++)
+    {
+        fprintf(stdout, "%s,%d\n", word_counts[i].word, word_counts[i].count);
+        //free word_count[...].word
+        free(word_counts[i].word);
+    }
     free(text);
     return EXIT_SUCCESS;
 }

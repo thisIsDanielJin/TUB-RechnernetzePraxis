@@ -53,18 +53,24 @@ void add_word(KeyValue *word_counts, size_t *word_count_size,const char *word, c
     if (index == -1)
     {
         word_counts[*word_count_size].key = strdup(word);
-        word_counts[*word_count_size].value = strdup(value);
+        word_counts[*word_count_size].value = (char*)calloc(256, sizeof(char));
+        strcat(word_counts[*word_count_size].value, value);
         *word_count_size = *word_count_size + 1;
     }
     else
     {
         //realloc memory so that we can't get a buffer overflow in strcat
-        char *ptr = realloc(word_counts[index].value,1);
-        if(ptr == NULL){
-            fprintf(stderr, "Memory reallocation failed\n");
-            return;
+        if(strnlen(word_counts[index].value, 256) == 255){
+            char *ptr = realloc(word_counts[index].value,256);
+            if(ptr == NULL){
+                fprintf(stderr, "Memory reallocation failed\n");
+                return;
+            }
+            strcat(ptr, value); 
         }
-        strcat(ptr, value); 
+        else{
+           strcat(word_counts[index].value, value); 
+        }
     }
     //pthread_mutex_unlock(&word_counts_mutex);
     return;
@@ -93,14 +99,12 @@ void process_map(const char *text, char* output ) //TODO MULTI-Thread DANGER
 
     //pthread_mutex_lock(&output_mutex);
     size_t size = 0;
+    size_t cpy = 0;
     for(size_t i = 0; i < word_count_size; i++){
         char buffer[MAX_MSG_SIZE-3];
-        size += snprintf(buffer, sizeof(buffer), "%s%s", word_counts[i].key, word_counts[i].value);
-        if(strlen(buffer) > (MAX_MSG_SIZE - 3 - strlen(output) - 1)){
-            fprintf(stderr, "No enough space.\n");
-            return;
-        }
-        strncat(output, buffer, MAX_MSG_SIZE - 3 - strlen(output) - 1);
+        cpy = snprintf(buffer, sizeof(buffer), "%s%s", word_counts[i].key, word_counts[i].value);
+        size += cpy;
+        strncat(output, buffer, cpy);
     }
     output[size] = '\0';
     //pthread_mutex_unlock(&output_mutex);
@@ -117,12 +121,16 @@ void process_reduce(const char *data, char* output) {
     int count = 0;
     size_t j = 0;
 
-    for (size_t i = 0; i < strlen(data); i++) {
+    for (size_t i = 0; i < strnlen(data, MAX_MSG_SIZE -3) + 1; i++) {
         if (data[i] == '1') {
             count++;
         } else {
             if (count > 0) {
-                output[j++] = count + '0';
+                char temp[5];
+                snprintf(temp, 5,"%d" ,count);
+                for(size_t k = 0; k < strnlen(temp,5); k++){
+                    output[j++] = temp[k];
+                }
                 count = 0;
             }
             output[j++] = data[i];
@@ -130,7 +138,11 @@ void process_reduce(const char *data, char* output) {
     }
 
     if (count > 0) {
-        output[j++] = count + '0';
+        char temp[5];
+        snprintf(temp, 5,"%d" ,count);
+        for(size_t k = 0; k < strnlen(temp,5); k++){
+            output[j++] = temp[k];
+        }
     }
 
     output[j] = '\0';
@@ -157,7 +169,10 @@ int main(int argc, char *argv[])
         zmq_bind(sockets[i], addr);
     }
 
-    while (1)
+    int rip = 0;
+    int kill = 1;
+
+    while (kill)
     {
         for (int i = 0; i < argc - 1; i++)
         {
@@ -174,25 +189,29 @@ int main(int argc, char *argv[])
 
             if (strcmp(type, "map") == 0)
             {
-                char output[MAX_MSG_SIZE-3];
+                char *output = calloc(MAX_MSG_SIZE -3, sizeof(char));
                 process_map(payload,output);
                 zmq_send(sockets[i], output, strlen(output) + 1, 0);
+                free(output);
             }
             else if (strcmp(type, "red") == 0)
             {
-                char output[MAX_MSG_SIZE-3];
+                char *output = calloc(MAX_MSG_SIZE -3, sizeof(char));
                 process_reduce(payload, output);
                 zmq_send(sockets[i], output, strlen(output) + 1, 0);
+                free(output);
             }
             else if (strcmp(type, "rip") == 0)
             {
                 zmq_send(sockets[i], "rip", 4, 0);
                 zmq_close(sockets[i]);
-                zmq_ctx_destroy(context);
-                return EXIT_SUCCESS;
+                rip++;
+                if(rip == argc - 1){
+                    kill = 0;
+                }
             }
         }
     }
-
+    zmq_ctx_destroy(context);
     return EXIT_SUCCESS;
 }

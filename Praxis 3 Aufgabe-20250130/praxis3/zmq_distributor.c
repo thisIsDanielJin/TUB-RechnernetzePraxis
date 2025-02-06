@@ -207,7 +207,10 @@ int main(int argc, char *argv[])
     for (int i = 0; i < word_count_size; i++)
     {
         fprintf(stdout, "%s,%d\n", word_counts[i].word, word_counts[i].count);
+        //free word_count[...].word
+        free(word_counts[i].word);
     }
+
 
     //Worker herunterfahren
     for (int i = 0; i < num_workers; i++)

@@ -3,3 +3,7 @@ Praxis 1/praxis1/build
 Praxis 2/praxis2/build
 Praxis 2/
 Praxis 3 Aufgabe-20250130/praxis3/build
+Praxis 3 Aufgabe-20250130/praxis3/test/__pycache__
+Praxis 3 Aufgabe-20250130/praxis3/test_files
+*.xml
+*.vscode

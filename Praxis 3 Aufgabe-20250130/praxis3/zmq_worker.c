@@ -4,7 +4,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <pthread.h>
-//  python3 -m pytest -s test/test_praxis3.py -k test_simple_text
+
 #define MAX_MSG_SIZE 1500
 #define MAX_WORDS 10000
 
@@ -13,9 +13,6 @@ typedef struct
     char *key;
     char *value;
 } KeyValue;
-
-//pthread_mutex_t word_counts_mutex = PTHREAD_MUTEX_INITIALIZER;
-//pthread_mutex_t output_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 // Hilfsfunktionen
 void generate_non_alpha_ascii(char *output) {
@@ -48,7 +45,6 @@ int find_word_index(KeyValue *word_counts, size_t *word_count_size, const char *
 
 void add_word(KeyValue *word_counts, size_t *word_count_size,const char *word, const char *value)
 {
-    //pthread_mutex_lock(&word_counts_mutex);
     int index = find_word_index(word_counts, word_count_size, word);
     if (index == -1)
     {
@@ -72,12 +68,11 @@ void add_word(KeyValue *word_counts, size_t *word_count_size,const char *word, c
            strcat(word_counts[index].value, value); 
         }
     }
-    //pthread_mutex_unlock(&word_counts_mutex);
     return;
 }
 
 // Verarbeitung von Map- und Reduce-Anfragen
-void process_map(const char *text, char* output ) //TODO MULTI-Thread DANGER
+void process_map(const char *text, char* output )
 {
     KeyValue word_counts[MAX_MSG_SIZE];         
     size_t word_count_size = 0;
@@ -97,7 +92,6 @@ void process_map(const char *text, char* output ) //TODO MULTI-Thread DANGER
         token = __strtok_r(NULL, none_ascii, &saveptr);
     }
 
-    //pthread_mutex_lock(&output_mutex);
     size_t size = 0;
     size_t cpy = 0;
     for(size_t i = 0; i < word_count_size; i++){
@@ -107,7 +101,7 @@ void process_map(const char *text, char* output ) //TODO MULTI-Thread DANGER
         strncat(output, buffer, cpy);
     }
     output[size] = '\0';
-    //pthread_mutex_unlock(&output_mutex);
+    
     //free allocated memory
     for(size_t k = 0; k < word_count_size; k++){
         free(word_counts[k].key);

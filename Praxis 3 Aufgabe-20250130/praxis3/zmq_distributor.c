@@ -5,8 +5,7 @@
 #include <ctype.h>
 #include <pthread.h>
 #include <math.h>
-//  gcc -o zmq_distributor zmq_distributor.c -pthread -lzmq
-// ./zmq_distributor test_simple_text.txt 5555
+
 #define MAX_MSG_SIZE 1500
 #define MAX_WORKERS 8
 
@@ -25,8 +24,6 @@ typedef struct{
 WordCount word_counts[100000];
 int word_count_size = 0;
 
-//pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
-
 // Vergleichsfunktion für das Sortieren
 int compare(const void *a, const void *b)
 {
@@ -40,7 +37,6 @@ int compare(const void *a, const void *b)
 // Verarbeitung der Reduce-Ergebnisse
 void* process_final_results(const char* data, int len){
     int i = 0;
-    //int len = strlen(data);
     while (i < len) {
         if(!(isalpha(data[i])) && !(isdigit(data[i]))){
             return NULL;
@@ -52,7 +48,7 @@ void* process_final_results(const char* data, int len){
         int wordLen = i - start;
         char tempWord[wordLen +1];
         if (wordLen > 0) {
-            strncpy(tempWord, data + start, wordLen); //strncpy not memory safe
+            strncpy(tempWord, data + start, wordLen);
             tempWord[wordLen] = '\0';
         }
         int count = 0;
@@ -60,7 +56,6 @@ void* process_final_results(const char* data, int len){
             count = count * 10 + (data[i] - '0');
             i++;
         }
-        //pthread_mutex_lock(&lock);
         int found = 0;
         for (int j = 0; j < word_count_size; j++) {
             if (strcmp(word_counts[j].word, tempWord) == 0) {
@@ -70,12 +65,11 @@ void* process_final_results(const char* data, int len){
             }
         }
         if (!found) {
-            word_counts[word_count_size].word = (char *)malloc(wordLen + 1);
+            word_counts[word_count_size].word = (char *)calloc(wordLen + 1, sizeof(char));
             strcpy(word_counts[word_count_size].word, tempWord);
             word_counts[word_count_size].count = count;
             word_count_size++;
         }
-        //pthread_mutex_unlock(&lock);
     }
     return NULL;
 }
@@ -89,7 +83,7 @@ void *worker_simultaneous_task(void* Worker){
     // Antworten empfangen und verarbeiten
     int message_beginning = 0;
     while (message_beginning < size) {
-        int message_end = message_beginning + MAX_MSG_SIZE - 4;
+        int message_end = message_beginning + MAX_MSG_SIZE - 5;
         if (message_end >= size){
             message_end = size;
         }
@@ -99,16 +93,13 @@ void *worker_simultaneous_task(void* Worker){
 
         // MAP-Phase
         char buffer_send[MAX_MSG_SIZE];
-        //printf("%c", message[message_end]);
         int copy_map = snprintf(buffer_send, sizeof(buffer_send), "map%.*s", message_end-message_beginning, message+message_beginning);
-        //printf("Worker sending chunk: [%d]\n", message_end-message_beginning);
         zmq_send(socket, buffer_send, copy_map + 1, 0);
         message_beginning = message_end + 1;
 
         //MAP recv
         char buffer[MAX_MSG_SIZE];
         int recv_bytes_map = zmq_recv(socket, buffer, MAX_MSG_SIZE, 0);
-        //buffer[recv_bytes_map] = '\0';
 
         // Reduce-Phase
         char reduce_data[recv_bytes_map + 4];
@@ -118,12 +109,10 @@ void *worker_simultaneous_task(void* Worker){
         //Reduce recv
         char new_buffer[MAX_MSG_SIZE];
         int recv_bytes_reduce = zmq_recv(socket, new_buffer, MAX_MSG_SIZE, 0);
-        //new_buffer[recv_bytes_reduce] = '\0';
 
         process_final_results(new_buffer, recv_bytes_reduce);
     }
     return NULL;
-    //pthread_exit(NULL);
 }
 
 // Hauptfunktion des Distributors
@@ -145,7 +134,7 @@ int main(int argc, char *argv[])
     fseek(file, 0, SEEK_END);
     long file_size = ftell(file);
     rewind(file);
-    char *text = malloc(file_size + 1);
+    char *text = calloc(file_size + 1, sizeof(char));
     fread(text, 1, file_size, file);
     text[file_size] = '\0';
     fclose(file);
@@ -154,7 +143,6 @@ int main(int argc, char *argv[])
     void *sockets[MAX_WORKERS];
     int num_workers = argc - 2;
 
-    //pthread_t threads[MAX_WORKERS];
     // Verbindung zu den Workern herstellen
     for (int i = 0; i < num_workers; i++)
     {
@@ -182,7 +170,7 @@ int main(int argc, char *argv[])
 
         total_chunck_size += chunk_size;
 
-        char *message = malloc(chunk_size + 1);
+        char *message = calloc(chunk_size + 1, sizeof(char));
         snprintf(message, chunk_size + 1, "%.*s", chunk_size, chunk);
         Workers[i].message = strdup(message);
         Workers[i].socket = sockets[i];
@@ -191,15 +179,7 @@ int main(int argc, char *argv[])
 
         free(message);
         free(Workers[i].message);
-        //pthread_create(&threads[i], NULL, worker_simultaneous_task,(void*)&Workers[i]);
     }
-
-    //Warten auf alle Workers
-    //for (int i = 0; i < num_workers; i++)
-    //{
-    //    pthread_join(threads[i], NULL);
-    //}
-
 
     // Sortieren und Ausgabe
     qsort(word_counts, word_count_size, sizeof(WordCount), compare);
@@ -215,11 +195,11 @@ int main(int argc, char *argv[])
     }
     zmq_ctx_destroy(context);
     
+    //Ausgabe und frees
     fprintf(stdout,"word,frequency\n");
     for (int i = 0; i < word_count_size; i++)
     {
         fprintf(stdout, "%s,%d\n", word_counts[i].word, word_counts[i].count);
-        //free word_count[...].word
         free(word_counts[i].word);
     }
     free(text);
